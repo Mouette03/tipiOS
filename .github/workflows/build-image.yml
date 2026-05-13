@@ -25,9 +25,22 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            coreutils quilt parted qemu-user-static debootstrap \
-            zerofree zip dosfstools libcap2-bin grep rsync xz-utils \
-            file git curl bc xxd kpartx
+            coreutils quilt parted qemu-user-static qemu-user-binfmt \
+            debootstrap zerofree zip dosfstools libcap2-bin grep rsync \
+            xz-utils file git curl bc xxd kpartx libarchive-tools arch-test
+
+      - name: Enable binfmt_misc for ARM emulation
+        run: |
+          # Charger le module binfmt_misc si pas déjà actif
+          sudo modprobe binfmt_misc 2>/dev/null || true
+          # Enregistrer les binaires ARM via qemu-user-binfmt
+          sudo systemctl restart systemd-binfmt 2>/dev/null || true
+          # Vérifier que qemu-arm et qemu-aarch64 sont enregistrés
+          ls /proc/sys/fs/binfmt_misc/qemu-aarch64 2>/dev/null && \
+            echo "binfmt ARM64 OK" || \
+            sudo /usr/lib/binfmt.d/qemu-aarch64 2>/dev/null || true
+          ls /proc/sys/fs/binfmt_misc/qemu-arm 2>/dev/null && \
+            echo "binfmt ARM OK" || true
 
       - name: Clone pi-gen (official Raspberry Pi image builder)
         run: |
