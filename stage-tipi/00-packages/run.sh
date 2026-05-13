@@ -1,4 +1,3 @@
 #!/bin/bash -e
-# pi-gen — Installation des paquets du stage tipi
-
-apt-get install -y --no-install-recommends $(cat "${STAGE_DIR}/packages")
+# Le fichier "packages" dans ce répertoire est traité automatiquement par
+# pi-gen (apt-get install via on_chroot). Ce run.sh est intentionnellement vide.

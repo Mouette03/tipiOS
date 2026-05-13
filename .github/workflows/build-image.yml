@@ -50,6 +50,7 @@ jobs:
         run: |
           cp -r stage-tipi /tmp/pi-gen/stage-tipi
           # Bit exécutable sur les scripts (non préservé par git sur Windows)
+          chmod +x /tmp/pi-gen/stage-tipi/prerun.sh
           chmod +x /tmp/pi-gen/stage-tipi/01-config/run.sh
           chmod +x /tmp/pi-gen/stage-tipi/01-config/files/start.sh
           chmod +x /tmp/pi-gen/stage-tipi/00-packages/run.sh
