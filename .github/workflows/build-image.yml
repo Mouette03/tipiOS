@@ -78,7 +78,19 @@ jobs:
       - name: Build image
         run: |
           cd /tmp/pi-gen
+          echo "=== Config utilisée ==="
+          cat config
+          echo "=== Stages disponibles ==="
+          ls -la /tmp/pi-gen/
+          echo "=== Contenu stage-tipi ==="
+          find /tmp/pi-gen/stage-tipi -type f | sort
+          echo "=== Lancement build ==="
           sudo bash build.sh 2>&1
+          echo "=== Build terminé (code $?) ==="
+          echo "=== Contenu work/ ==="
+          ls -lhR /tmp/pi-gen/work/ 2>/dev/null | head -80 || echo "work/ absent"
+          echo "=== Contenu deploy/ ==="
+          ls -lhR /tmp/pi-gen/deploy/ 2>/dev/null || echo "deploy/ absent"
         env:
           DEBIAN_FRONTEND: noninteractive
 
@@ -93,7 +105,7 @@ jobs:
           ls /tmp/pi-gen/work/ 2>/dev/null || true
 
       - name: List generated artifacts
-        run: ls -lh /tmp/pi-gen/deploy/
+        run: ls -lh /tmp/pi-gen/deploy/ || echo "Aucun artifact généré"
 
       - name: Upload image as artifact
         uses: actions/upload-artifact@v4
