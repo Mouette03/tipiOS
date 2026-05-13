@@ -229,22 +229,35 @@ def system_update():
 
 
 def install_runtipi():
-    step("Téléchargement du script d'installation runTipi...")
+    step("Installation de runTipi (Docker inclus — patience)...")
     try:
-        dl = subprocess.run(
-            ["curl", "-sSL", "--max-time", "60", "https://setup.runtipi.io"],
-            capture_output=True, text=True, timeout=70,
+        # Commande officielle : curl -L https://setup.runtipi.io | bash
+        curl = subprocess.Popen(
+            ["curl", "-L", "--max-time", "120", "https://setup.runtipi.io"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
-        if dl.returncode != 0:
-            raise RuntimeError(f"curl a échoué (code {dl.returncode})")
+        bash = subprocess.Popen(
+            ["bash"],
+            stdin=curl.stdout,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
+        curl.stdout.close()  # permet à curl de recevoir SIGPIPE si bash se termine
 
-        script_path = "/tmp/runtipi-install.sh"
-        with open(script_path, "w") as f:
-            f.write(dl.stdout)
-        os.chmod(script_path, 0o755)
+        for line in iter(bash.stdout.readline, ""):
+            line = line.rstrip()
+            if line:
+                out(line)
 
-        step("Installation de runTipi (Docker inclus — patience)...")
-        run_cmd(["bash", script_path], check=True)
+        bash.wait()
+        curl.wait()
+
+        if bash.returncode != 0:
+            raise RuntimeError(f"Le script runTipi a échoué (code {bash.returncode})")
+
         done("runTipi installé avec succès !")
     except Exception as e:
         err(f"Installation runTipi : {e}")
