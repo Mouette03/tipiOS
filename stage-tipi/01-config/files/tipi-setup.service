@@ -1,0 +1,19 @@
+[Unit]
+Description=TipiOS — Premier démarrage : configuration et installation
+Documentation=https://github.com/votre-repo/tipiOS
+After=network-pre.target NetworkManager.service avahi-daemon.service
+Wants=network-pre.target NetworkManager.service
+ConditionPathExists=/var/lib/tipi-setup/.not-configured
+
+[Service]
+Type=simple
+ExecStart=/opt/tipi-setup/start.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tipi-setup
+# Redémarre uniquement si crash inattendu, pas si arrêt volontaire (code 0)
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

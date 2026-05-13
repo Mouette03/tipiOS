@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Configuration système{% endblock %}
+
+{% block content %}
+<h2>Configuration du système</h2>
+<p class="subtitle">
+  {% if ethernet %}
+    ✅ Ethernet connecté{% if current_ip %} — IP actuelle : <strong>{{ current_ip }}</strong>{% endif %}
+  {% else %}
+    WiFi connecté — complétez la configuration.
+  {% endif %}
+</p>
+
+{% if error %}
+  <div class="alert alert-error">{{ error }}</div>
+{% endif %}
+
+<form method="POST" action="/configure/apply" autocomplete="off">
+
+  <!-- Hostname -->
+  <div class="field">
+    <label>Nom de la machine (hostname)</label>
+    <input type="text" name="hostname" value="tipios" pattern="[a-zA-Z0-9\-]+" maxlength="63"
+           placeholder="tipios" required>
+    <small style="color:var(--muted);font-size:0.72rem">
+      Accessible sur votre réseau via <em>&lt;hostname&gt;.local</em>
+    </small>
+  </div>
+
+  <!-- Utilisateur SSH -->
+  <div class="field">
+    <label>Nom d'utilisateur SSH</label>
+    <input type="text" name="username" pattern="[a-zA-Z0-9_\-]+" maxlength="32"
+           placeholder="pi" required autocomplete="off">
+  </div>
+
+  <div class="field">
+    <label>Mot de passe SSH</label>
+    <div style="position:relative">
+      <input type="password" name="password" id="pwd1" minlength="8"
+             placeholder="8 caractères minimum" required autocomplete="new-password">
+      <button type="button" onclick="toggle('pwd1')"
+        style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer">👁</button>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Confirmation du mot de passe</label>
+    <input type="password" name="confirm_password" id="pwd2" minlength="8"
+           placeholder="Répétez le mot de passe" required autocomplete="new-password">
+  </div>
+
+  <div class="field">
+    <label>Port SSH <span style="color:var(--muted)">(défaut : 22)</span></label>
+    <input type="number" name="ssh_port" value="22" min="1" max="65535" style="width:120px">
+  </div>
+
+  <!-- Clé SSH publique -->
+  <details>
+    <summary>Clé SSH publique (optionnel)</summary>
+    <div class="inner">
+      <div class="field">
+        <label>Clé publique (format <code>ssh-rsa …</code> ou <code>ssh-ed25519 …</code>)</label>
+        <textarea name="ssh_key" id="ssh_key" placeholder="Collez votre clé publique ici"></textarea>
+      </div>
+      <label class="check-row">
+        <input type="checkbox" name="disable_password_auth" id="disable_pass">
+        Désactiver l'authentification par mot de passe SSH (recommandé si clé fournie)
+      </label>
+    </div>
+  </details>
+
+  <hr style="border:none;border-top:1px solid var(--border);margin:1.25rem 0">
+
+  <!-- Fuseau horaire -->
+  <div class="field">
+    <label>Fuseau horaire</label>
+    <select name="timezone">
+      {% for tz in timezones %}
+        <option value="{{ tz }}" {% if tz == 'Europe/Paris' %}selected{% endif %}>{{ tz }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <!-- Locale -->
+  <div class="field">
+    <label>Langue / Locale</label>
+    <select name="locale">
+      {% for code, label in locales %}
+        <option value="{{ code }}" {% if code == 'fr_FR.UTF-8' %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <!-- IP statique -->
+  <details>
+    <summary>IP statique (optionnel — recommandé pour un serveur)</summary>
+    <div class="inner">
+      <div class="alert alert-info" style="margin-bottom:1rem">
+        Laissez vide pour utiliser le DHCP (votre box attribue l'IP automatiquement).
+      </div>
+      <div class="field">
+        <label>Adresse IP (ex: 192.168.1.50 ou 192.168.1.50/24)</label>
+        <input type="text" name="static_ip" placeholder="192.168.1.50"
+               pattern="(\d{1,3}\.){3}\d{1,3}(/\d{1,2})?">
+      </div>
+      <div class="field">
+        <label>Passerelle (votre box / routeur)</label>
+        <input type="text" name="static_gw" placeholder="192.168.1.1"
+               pattern="(\d{1,3}\.){3}\d{1,3}">
+      </div>
+      <div class="field">
+        <label>Serveur DNS</label>
+        <input type="text" name="static_dns" value="8.8.8.8"
+               pattern="(\d{1,3}\.){3}\d{1,3}">
+      </div>
+    </div>
+  </details>
+
+  <div style="margin-top:1.5rem">
+    <button type="submit" class="btn btn-primary btn-full" id="submit-btn">
+      ▶ Appliquer et installer runTipi
+    </button>
+  </div>
+</form>
+{% endblock %}
+
+{% block head %}
+<script>
+  function toggle(id) {
+    const el = document.getElementById(id);
+    el.type = el.type === "password" ? "text" : "password";
+  }
+
+  // Désactiver le bouton à la soumission pour éviter le double-clic
+  document.addEventListener("DOMContentLoaded", () => {
+    document.querySelector("form").addEventListener("submit", () => {
+      const btn = document.getElementById("submit-btn");
+      btn.disabled = true;
+      btn.textContent = "Lancement en cours…";
+    });
+
+    // Validation des mots de passe côté client
+    const pwd2 = document.getElementById("pwd2");
+    pwd2.addEventListener("input", () => {
+      const pwd1 = document.getElementById("pwd1").value;
+      if (pwd2.value && pwd2.value !== pwd1) {
+        pwd2.setCustomValidity("Les mots de passe ne correspondent pas");
+      } else {
+        pwd2.setCustomValidity("");
+      }
+    });
+
+    // Désactiver "désactiver mdp" si aucune clé SSH
+    const sshKey = document.getElementById("ssh_key");
+    const disablePass = document.getElementById("disable_pass");
+    sshKey.addEventListener("input", () => {
+      if (!sshKey.value.trim()) disablePass.checked = false;
+    });
+  });
+</script>
+{% endblock %}

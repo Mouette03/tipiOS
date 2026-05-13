@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Installation en cours{% endblock %}
+
+{% block content %}
+<h2>Installation en cours</h2>
+<p class="subtitle">Ne fermez pas cette page. Le Raspberry Pi se configure automatiquement.</p>
+
+<!-- Carte résultat final (masquée jusqu'à la fin) -->
+<div id="result-card" style="display:none;margin-bottom:1.25rem">
+  <div class="alert alert-success" style="font-size:0.95rem">
+    <strong>✅ runTipi est prêt !</strong><br>
+    <span id="result-links"></span>
+  </div>
+</div>
+
+<!-- Barre de progression -->
+<div style="background:var(--bg);border-radius:8px;overflow:hidden;height:6px;margin-bottom:1rem">
+  <div id="progress-bar" style="height:100%;background:var(--accent);width:0%;transition:width 0.4s ease"></div>
+</div>
+
+<!-- Log en temps réel -->
+<div id="log-container" style="
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.85rem;
+  font-family: monospace;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  max-height: 400px;
+  overflow-y: auto;
+  min-height: 120px;
+">
+  <span style="color:var(--muted)">En attente du démarrage…</span>
+</div>
+
+<div id="spinner" style="text-align:center;margin-top:1rem;color:var(--muted);font-size:0.82rem">
+  <span class="spin">⟳</span> Traitement en cours…
+</div>
+{% endblock %}
+
+{% block head %}
+<style>
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { display: inline-block; animation: spin 1.2s linear infinite; }
+
+  .log-step    { color: #93c5fd; font-weight: bold; }
+  .log-success { color: #86efac; }
+  .log-error   { color: #fca5a5; }
+  .log-log     { color: #94a3b8; }
+  .log-final   { color: #fde68a; font-weight: bold; }
+</style>
+<script>
+  const STEPS = [
+    "hostname", "timezone", "locale", "utilisateur", "ssh", "ip",
+    "apt update", "apt upgrade", "runtipi"
+  ];
+  let stepCount = 0;
+
+  const logEl  = document.getElementById("log-container");
+  const barEl  = document.getElementById("progress-bar");
+  const spinner = document.getElementById("spinner");
+
+  // Vider le placeholder dès la première entrée
+  let firstEntry = true;
+
+  function appendLog(msg, level) {
+    if (firstEntry) { logEl.innerHTML = ""; firstEntry = false; }
+
+    const line = document.createElement("div");
+    line.className = "log-" + level;
+
+    const prefix = {
+      step:    "▶ ",
+      success: "✔ ",
+      error:   "✖ ",
+      final:   "★ ",
+      log:     "  ",
+    }[level] || "  ";
+
+    line.textContent = prefix + msg;
+    logEl.appendChild(line);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function updateProgress() {
+    const pct = Math.min(95, Math.round((stepCount / (STEPS.length + 1)) * 100));
+    barEl.style.width = pct + "%";
+  }
+
+  const es = new EventSource("/progress/stream");
+
+  es.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    const { msg, level, ip, hostname } = data;
+
+    if (level === "step") {
+      stepCount++;
+      updateProgress();
+    }
+
+    if (level === "final") {
+      es.close();
+      barEl.style.width = "100%";
+      spinner.style.display = "none";
+
+      // Afficher le résultat
+      const card = document.getElementById("result-card");
+      const links = document.getElementById("result-links");
+      card.style.display = "";
+
+      let html = "";
+      if (ip) {
+        html += `<a href="http://${ip}:3000" target="_blank" style="color:#6ee7b7">http://${ip}:3000</a>`;
+      }
+      if (hostname) {
+        html += (ip ? " &nbsp;|&nbsp; " : "") +
+          `<a href="http://${hostname}.local:3000" target="_blank" style="color:#6ee7b7">http://${hostname}.local:3000</a>`;
+      }
+      links.innerHTML = html || "Voir l'adresse IP de votre Raspberry Pi";
+    } else {
+      appendLog(msg, level);
+    }
+  };
+
+  es.onerror = () => {
+    // Reconnexion automatique gérée par l'EventSource
+    // On affiche juste une note si la connexion est définitivement perdue
+    setTimeout(() => {
+      if (es.readyState === EventSource.CLOSED) {
+        appendLog("Connexion perdue. Si l'installation est terminée, accédez à runTipi via l'IP affichée.", "error");
+        spinner.style.display = "none";
+      }
+    }, 5000);
+  };
+</script>
+{% endblock %}

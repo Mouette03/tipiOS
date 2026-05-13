@@ -1,0 +1,9 @@
+python3-flask
+python3-full
+avahi-daemon
+libnss-mdns
+curl
+git
+network-manager
+dnsmasq
+ca-certificates

@@ -1,0 +1,104 @@
+name: Build TipiOS Image
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Tag de la release (ex: v1.0.0)'
+        required: false
+        default: ''
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pi-gen dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            coreutils quilt parted qemu-user-static debootstrap \
+            zerofree zip dosfstools libcap2-bin grep rsync xz-utils \
+            file git curl bc xxd kpartx
+
+      - name: Clone pi-gen (official Raspberry Pi image builder)
+        run: |
+          git clone --depth=1 https://github.com/RPi-Distro/pi-gen.git /tmp/pi-gen
+
+      - name: Copy custom stage into pi-gen
+        run: |
+          cp -r stage-tipi /tmp/pi-gen/stage-tipi
+          # Skip intermediate images to speed up the build
+          touch /tmp/pi-gen/stage0/SKIP_IMAGES
+          touch /tmp/pi-gen/stage1/SKIP_IMAGES
+          touch /tmp/pi-gen/stage2/SKIP_IMAGES
+
+      - name: Create pi-gen config
+        run: |
+          cat > /tmp/pi-gen/config << 'EOF'
+          IMG_NAME="tipiOS"
+          RELEASE="trixie"
+          DEPLOY_COMPRESSION="xz"
+          TARGET_HOSTNAME="tipisetup"
+          FIRST_USER_NAME="tipi"
+          FIRST_USER_PASS="changeme"
+          ENABLE_SSH=1
+          LOCALE_DEFAULT="fr_FR.UTF-8"
+          KEYBOARD_KEYMAP="fr"
+          KEYBOARD_LAYOUT="French"
+          TIMEZONE_DEFAULT="Europe/Paris"
+          STAGE_LIST="stage0 stage1 stage2 stage-tipi"
+          EOF
+
+      - name: Build image
+        run: |
+          cd /tmp/pi-gen
+          sudo bash build.sh
+        env:
+          DEBIAN_FRONTEND: noninteractive
+
+      - name: List generated artifacts
+        run: ls -lh /tmp/pi-gen/deploy/
+
+      - name: Upload image as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tipiOS-${{ github.run_number }}-${{ github.sha }}
+          path: /tmp/pi-gen/deploy/*.img.xz
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.release_tag || format('build-{0}', github.run_number) }}
+          name: TipiOS Build ${{ github.run_number }}
+          body: |
+            ## TipiOS — Image Raspberry Pi clé en main
+
+            ### Flashage
+            1. Téléchargez le fichier `.img.xz`
+            2. Flashez avec [Raspberry Pi Imager](https://www.raspberrypi.com/software/) ou `dd`
+            3. Insérez la carte SD dans votre RPi et démarrez
+
+            ### Premier démarrage
+            - **WiFi hotspot** : connectez-vous au réseau `TipiSetup` (mot de passe : `TipiSetup2024!`)
+            - **Accès portail** : ouvrez `http://tipisetup.local` ou `http://10.42.0.1`
+            - Configurez votre réseau, SSH, hostname, puis lancez l'installation
+
+            ### Matériel recommandé
+            - Raspberry Pi 4 ou 5 (4 Go RAM minimum)
+            - Carte SD 32 Go minimum
+
+            **Commit** : ${{ github.sha }}
+          files: /tmp/pi-gen/deploy/*.img.xz
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
