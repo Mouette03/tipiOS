@@ -2,7 +2,9 @@ name: Build TipiOS Image
 
 on:
   push:
-    branches: [main]
+    branches: ['**']          # toutes les branches
+  pull_request:
+    branches: ['**']
   workflow_dispatch:
     inputs:
       release_tag:
