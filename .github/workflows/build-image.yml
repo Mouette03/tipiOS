@@ -49,6 +49,10 @@ jobs:
       - name: Copy custom stage into pi-gen
         run: |
           cp -r stage-tipi /tmp/pi-gen/stage-tipi
+          # Bit exécutable sur les scripts (non préservé par git sur Windows)
+          chmod +x /tmp/pi-gen/stage-tipi/01-config/run.sh
+          chmod +x /tmp/pi-gen/stage-tipi/01-config/files/start.sh
+          chmod +x /tmp/pi-gen/stage-tipi/00-packages/run.sh
           # Skip intermediate images to speed up the build
           touch /tmp/pi-gen/stage0/SKIP_IMAGES
           touch /tmp/pi-gen/stage1/SKIP_IMAGES
@@ -56,20 +60,21 @@ jobs:
 
       - name: Create pi-gen config
         run: |
-          cat > /tmp/pi-gen/config << 'EOF'
-          IMG_NAME="tipiOS"
-          RELEASE="trixie"
-          DEPLOY_COMPRESSION="xz"
-          TARGET_HOSTNAME="tipisetup"
-          FIRST_USER_NAME="tipi"
-          FIRST_USER_PASS="changeme"
-          ENABLE_SSH=1
-          LOCALE_DEFAULT="fr_FR.UTF-8"
-          KEYBOARD_KEYMAP="fr"
-          KEYBOARD_LAYOUT="French"
-          TIMEZONE_DEFAULT="Europe/Paris"
-          STAGE_LIST="stage0 stage1 stage2 stage-tipi"
-          EOF
+          # Attention : le heredoc ne doit PAS être indenté
+          cat > /tmp/pi-gen/config << 'PIGENEOF'
+IMG_NAME="tipiOS"
+RELEASE="trixie"
+DEPLOY_COMPRESSION="xz"
+TARGET_HOSTNAME="tipisetup"
+FIRST_USER_NAME="tipi"
+FIRST_USER_PASS="changeme"
+ENABLE_SSH=1
+LOCALE_DEFAULT="fr_FR.UTF-8"
+KEYBOARD_KEYMAP="fr"
+KEYBOARD_LAYOUT="French"
+TIMEZONE_DEFAULT="Europe/Paris"
+STAGE_LIST="stage0 stage1 stage2 /tmp/pi-gen/stage-tipi"
+PIGENEOF
 
       - name: Build image
         run: |
