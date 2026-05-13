@@ -72,15 +72,25 @@ jobs:
             echo 'KEYBOARD_KEYMAP="fr"'
             echo 'KEYBOARD_LAYOUT="French"'
             echo 'TIMEZONE_DEFAULT="Europe/Paris"'
-            echo 'STAGE_LIST="stage0 stage1 stage2 /tmp/pi-gen/stage-tipi"'
+            echo 'STAGE_LIST="stage0 stage1 stage2 stage-tipi"'
           } > /tmp/pi-gen/config
 
       - name: Build image
         run: |
           cd /tmp/pi-gen
-          sudo bash build.sh
+          sudo bash build.sh 2>&1
         env:
           DEBIAN_FRONTEND: noninteractive
+
+      - name: Show build log on failure
+        if: failure()
+        run: |
+          echo '=== Dernières lignes du log pi-gen ==='
+          find /tmp/pi-gen -name '*.log' -exec tail -50 {} \; 2>/dev/null || true
+          echo '=== Contenu deploy/ ==='
+          ls -lhR /tmp/pi-gen/deploy/ 2>/dev/null || echo 'deploy/ absent'
+          echo '=== Stages executés ==='
+          ls /tmp/pi-gen/work/ 2>/dev/null || true
 
       - name: List generated artifacts
         run: ls -lh /tmp/pi-gen/deploy/
