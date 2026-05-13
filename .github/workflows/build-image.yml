@@ -60,21 +60,20 @@ jobs:
 
       - name: Create pi-gen config
         run: |
-          # Attention : le heredoc ne doit PAS être indenté
-          cat > /tmp/pi-gen/config << 'PIGENEOF'
-IMG_NAME="tipiOS"
-RELEASE="trixie"
-DEPLOY_COMPRESSION="xz"
-TARGET_HOSTNAME="tipisetup"
-FIRST_USER_NAME="tipi"
-FIRST_USER_PASS="changeme"
-ENABLE_SSH=1
-LOCALE_DEFAULT="fr_FR.UTF-8"
-KEYBOARD_KEYMAP="fr"
-KEYBOARD_LAYOUT="French"
-TIMEZONE_DEFAULT="Europe/Paris"
-STAGE_LIST="stage0 stage1 stage2 /tmp/pi-gen/stage-tipi"
-PIGENEOF
+          {
+            echo 'IMG_NAME="tipiOS"'
+            echo 'RELEASE="trixie"'
+            echo 'DEPLOY_COMPRESSION="xz"'
+            echo 'TARGET_HOSTNAME="tipisetup"'
+            echo 'FIRST_USER_NAME="tipi"'
+            echo 'FIRST_USER_PASS="changeme"'
+            echo 'ENABLE_SSH=1'
+            echo 'LOCALE_DEFAULT="fr_FR.UTF-8"'
+            echo 'KEYBOARD_KEYMAP="fr"'
+            echo 'KEYBOARD_LAYOUT="French"'
+            echo 'TIMEZONE_DEFAULT="Europe/Paris"'
+            echo 'STAGE_LIST="stage0 stage1 stage2 /tmp/pi-gen/stage-tipi"'
+          } > /tmp/pi-gen/config
 
       - name: Build image
         run: |
