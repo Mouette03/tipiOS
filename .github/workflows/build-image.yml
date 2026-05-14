@@ -25,9 +25,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            coreutils quilt parted qemu-user-static \
+            coreutils quilt parted qemu-user-binfmt \
             debootstrap zerofree zip dosfstools libcap2-bin grep rsync \
-            xz-utils file git curl bc xxd kpartx libarchive-tools arch-test
+            xz-utils file git curl bc xxd kpartx libarchive-tools arch-test \
+            bmap-tools kmod e2fsprogs pigz
 
       - name: Enable binfmt_misc for ARM emulation
         run: |
@@ -42,18 +43,17 @@ jobs:
           ls /proc/sys/fs/binfmt_misc/qemu-arm 2>/dev/null && \
             echo "binfmt ARM OK" || true
 
-      - name: Clone pi-gen (official Raspberry Pi image builder)
+      - name: Clone pi-gen (arm64 branch for 64-bit images)
         run: |
-          git clone --depth=1 https://github.com/RPi-Distro/pi-gen.git /tmp/pi-gen
+          git clone --depth=1 --branch arm64 https://github.com/RPi-Distro/pi-gen.git /tmp/pi-gen
 
       - name: Copy custom stage into pi-gen
         run: |
           cp -r stage-tipi /tmp/pi-gen/stage-tipi
           # Bit exécutable sur les scripts (non préservé par git sur Windows)
           chmod +x /tmp/pi-gen/stage-tipi/prerun.sh
-          chmod +x /tmp/pi-gen/stage-tipi/01-config/run.sh
+          chmod +x /tmp/pi-gen/stage-tipi/01-config/00-run.sh
           chmod +x /tmp/pi-gen/stage-tipi/01-config/files/start.sh
-          chmod +x /tmp/pi-gen/stage-tipi/00-packages/run.sh
           # Skip intermediate images to speed up the build
           touch /tmp/pi-gen/stage0/SKIP_IMAGES
           touch /tmp/pi-gen/stage1/SKIP_IMAGES
@@ -73,6 +73,7 @@ jobs:
             echo 'KEYBOARD_KEYMAP="fr"'
             echo 'KEYBOARD_LAYOUT="French"'
             echo 'TIMEZONE_DEFAULT="Europe/Paris"'
+            echo 'DISABLE_FIRST_BOOT_USER_RENAME=1'
             echo 'DISABLE_FIRST_BOOT_WIZARD=1'
             echo 'STAGE_LIST="stage0 stage1 stage2 stage-tipi"'
           } > /tmp/pi-gen/config
