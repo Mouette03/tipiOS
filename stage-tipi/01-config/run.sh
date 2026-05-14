@@ -42,10 +42,6 @@ systemctl enable avahi-daemon.service
 # Configurer nsswitch pour résoudre les noms .local via mDNS
 sed -i 's/^hosts:.*/hosts:          files mdns4_minimal [NOTFOUND=return] dns/' /etc/nsswitch.conf
 
-# Autoriser le port 80 à être ouvert par un processus non-root (Flask)
-setcap 'cap_net_bind_service=+ep' /usr/bin/python3.12 2>/dev/null || \
-setcap 'cap_net_bind_service=+ep' /usr/bin/python3 2>/dev/null || true
-
 # Hostname de provisionnement (sera remplacé au premier démarrage)
 echo "tipisetup" > /etc/hostname
 echo "127.0.1.1   tipisetup" >> /etc/hosts

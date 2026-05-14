@@ -73,6 +73,7 @@ jobs:
             echo 'KEYBOARD_KEYMAP="fr"'
             echo 'KEYBOARD_LAYOUT="French"'
             echo 'TIMEZONE_DEFAULT="Europe/Paris"'
+            echo 'DISABLE_FIRST_BOOT_WIZARD=1'
             echo 'STAGE_LIST="stage0 stage1 stage2 stage-tipi"'
           } > /tmp/pi-gen/config
 
