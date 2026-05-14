@@ -7,7 +7,7 @@ set -e
 HOTSPOT_SSID="TipiSetup"
 HOTSPOT_PSK="TipiSetup2024!"
 HOTSPOT_CON="TipiHotspot"
-LOG="/var/log/tipi-setup.log"
+LOG="/boot/firmware/tipi-setup.log"
 
 log() { echo "[tipi-setup] $*" | tee -a "$LOG" ; }
 
