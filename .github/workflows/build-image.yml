@@ -21,27 +21,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Configurer QEMU pour émulation ARM64
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64,arm
+
       - name: Install pi-gen dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            coreutils quilt parted qemu-user-binfmt \
+            coreutils quilt parted qemu-user-static \
             debootstrap zerofree zip dosfstools libcap2-bin grep rsync \
             xz-utils file git curl bc xxd kpartx libarchive-tools arch-test \
             bmap-tools kmod e2fsprogs pigz
 
-      - name: Enable binfmt_misc for ARM emulation
+      - name: Vérifier enregistrement binfmt ARM64
         run: |
-          # Charger le module binfmt_misc si pas déjà actif
-          sudo modprobe binfmt_misc 2>/dev/null || true
-          # Enregistrer les binaires ARM via qemu-user-binfmt
-          sudo systemctl restart systemd-binfmt 2>/dev/null || true
-          # Vérifier que qemu-arm et qemu-aarch64 sont enregistrés
-          ls /proc/sys/fs/binfmt_misc/qemu-aarch64 2>/dev/null && \
-            echo "binfmt ARM64 OK" || \
-            sudo /usr/lib/binfmt.d/qemu-aarch64 2>/dev/null || true
-          ls /proc/sys/fs/binfmt_misc/qemu-arm 2>/dev/null && \
-            echo "binfmt ARM OK" || true
+          ls /proc/sys/fs/binfmt_misc/qemu-aarch64 && echo "binfmt ARM64 OK" || echo "ATTENTION: ARM64 non enregistré"
+          ls /proc/sys/fs/binfmt_misc/qemu-arm && echo "binfmt ARM OK" || echo "ATTENTION: ARM non enregistré"
 
       - name: Clone pi-gen (arm64 branch for 64-bit images)
         run: |
@@ -88,12 +85,15 @@ jobs:
           echo "=== Contenu stage-tipi ==="
           find /tmp/pi-gen/stage-tipi -type f | sort
           echo "=== Lancement build ==="
-          sudo bash build.sh 2>&1
-          echo "=== Build terminé (code $?) ==="
-          echo "=== Contenu work/ ==="
-          ls -lhR /tmp/pi-gen/work/ 2>/dev/null | head -80 || echo "work/ absent"
+          if ! sudo bash build.sh; then
+            echo "=== ECHEC build.sh ==="
+            echo "=== Contenu deploy/ ==="
+            ls -lhR /tmp/pi-gen/deploy/ 2>/dev/null || echo "deploy/ absent"
+            exit 1
+          fi
+          echo "=== Build réussi ==="
           echo "=== Contenu deploy/ ==="
-          ls -lhR /tmp/pi-gen/deploy/ 2>/dev/null || echo "deploy/ absent"
+          ls -lhR /tmp/pi-gen/deploy/
         env:
           DEBIAN_FRONTEND: noninteractive
 
@@ -114,7 +114,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tipiOS-${{ github.run_number }}-${{ github.sha }}
-          path: /tmp/pi-gen/deploy/*.img.xz
+          path: /tmp/pi-gen/deploy/
           retention-days: 30
 
       - name: Create GitHub Release
@@ -141,7 +141,7 @@ jobs:
             - Carte SD 32 Go minimum
 
             **Commit** : ${{ github.sha }}
-          files: /tmp/pi-gen/deploy/*.img.xz
+          files: /tmp/pi-gen/deploy/*.img*
           draft: false
           prerelease: false
         env:
