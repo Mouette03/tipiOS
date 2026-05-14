@@ -9,9 +9,9 @@ HOTSPOT_PSK="TipiSetup2024!"
 HOTSPOT_CON="TipiHotspot"
 LOG="/boot/firmware/tipi-setup.log"
 
-log() { echo "[tipi-setup] $*" | tee -a "$LOG" ; }
+log() { echo "[tipi-setup] $*"; }
 
-# Rediriger toute la sortie vers le log pour déboguer
+# Rediriger toute la sortie vers le log (une seule fois)
 exec > >(tee -a "$LOG") 2>&1
 log "=== Démarrage tipi-setup $(date) ==="
 
@@ -25,29 +25,27 @@ done
 # ------------------------------------------------------------------ #
 #  2. Hotspot WiFi (si interface wlan0 disponible)                    #
 # ------------------------------------------------------------------ #
-if ip link show wlan0 &>/dev/null 2>&1; then
+if ip link show wlan0 &>/dev/null; then
     log "Interface wlan0 détectée — création du hotspot..."
 
     # Supprimer l'ancienne connexion si elle existe
     nmcli con delete "${HOTSPOT_CON}" 2>/dev/null || true
 
-    nmcli con add \
-        type wifi \
-        ifname wlan0 \
-        con-name "${HOTSPOT_CON}" \
-        autoconnect no \
-        ssid "${HOTSPOT_SSID}" \
-        802-11-wireless.mode ap \
-        ipv4.method shared \
-        wifi-sec.key-mgmt wpa-psk \
-        wifi-sec.psk "${HOTSPOT_PSK}" && \
-        log "Connexion hotspot créée" || log "ERREUR création hotspot"
-
-    nmcli con up "${HOTSPOT_CON}" && \
-        log "Hotspot '${HOTSPOT_SSID}' actif — IP RPi : 10.42.0.1" || \
-        log "AVERTISSEMENT : impossible de démarrer le hotspot"
+    # Créer et activer le hotspot en une seule commande (device explicite)
+    if nmcli dev wifi hotspot \
+            ifname wlan0 \
+            con-name "${HOTSPOT_CON}" \
+            ssid "${HOTSPOT_SSID}" \
+            password "${HOTSPOT_PSK}"; then
+        log "Hotspot '${HOTSPOT_SSID}' actif — IP RPi : 10.42.0.1"
+    else
+        log "ERREUR : nmcli dev wifi hotspot a échoué (code $?)"
+        # Afficher l'état des devices NM pour diagnostiquer
+        nmcli dev status >> "$LOG" 2>&1 || true
+    fi
 else
     log "Pas d'interface wlan0 — hotspot non démarré"
+    ip link >> "$LOG" 2>&1 || true
 fi
 
 # ------------------------------------------------------------------ #
