@@ -1,8 +1,8 @@
 [Unit]
 Description=TipiOS — Premier démarrage : configuration et installation
 Documentation=https://github.com/votre-repo/tipiOS
-After=network-pre.target NetworkManager.service avahi-daemon.service
-Wants=network-pre.target NetworkManager.service
+After=network-pre.target NetworkManager.service avahi-daemon.service NetworkManager-wait-online.service
+Wants=NetworkManager.service NetworkManager-wait-online.service
 ConditionPathExists=/var/lib/tipi-setup/.not-configured
 
 [Service]

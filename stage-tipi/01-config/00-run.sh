@@ -40,7 +40,8 @@ rm -f /lib/systemd/system/userconfig.service \
 # Activer le service tipi-setup
 systemctl enable tipi-setup.service
 
-# Activer Avahi (mDNS / .local)
+    # NetworkManager-wait-online pour que wlan0 soit prêt avant tipi-setup
+    systemctl enable NetworkManager-wait-online.service
 systemctl enable avahi-daemon.service
 
 # Configurer nsswitch pour résoudre les noms .local via mDNS

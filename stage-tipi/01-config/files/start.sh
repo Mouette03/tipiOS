@@ -16,22 +16,55 @@ exec > >(tee -a "$LOG") 2>&1
 log "=== Démarrage tipi-setup $(date) ==="
 
 # ------------------------------------------------------------------ #
-#  1. Attendre que le réseau soit prêt (max 10s)                      #
+#  1. Attendre NetworkManager + débloquer le WiFi                     #
 # ------------------------------------------------------------------ #
-for i in $(seq 1 10); do
-    nmcli general status 2>/dev/null | grep -q 'connected\|disconnected' && break || sleep 1
+for i in $(seq 1 15); do
+    nmcli general status 2>/dev/null | grep -q 'connecté\|connected\|disconnected\|déconnecté' && break || sleep 1
 done
 
+# Débloquer le WiFi (rfkill soft/hard block fréquent sur RPi au boot)
+rfkill unblock wifi 2>/dev/null || true
+rfkill unblock all  2>/dev/null || true
+log "rfkill unblock effectué"
+
 # ------------------------------------------------------------------ #
-#  2. Hotspot WiFi (si interface wlan0 disponible)                    #
+#  2. Attendre que wlan0 soit DISPONIBLE dans NetworkManager (max 30s) #
 # ------------------------------------------------------------------ #
+WLAN_READY=0
 if ip link show wlan0 &>/dev/null; then
-    log "Interface wlan0 détectée — création du hotspot..."
+    log "Interface wlan0 présente — attente disponibilité NM..."
+    for i in $(seq 1 30); do
+        state=$(nmcli -t -f DEVICE,STATE dev status 2>/dev/null | grep "^wlan0:" | cut -d: -f2)
+        log "  wlan0 état ($i/30) : ${state:-inconnu}"
+        case "$state" in
+            disconnected|déconnecté|disconnected*)
+                WLAN_READY=1
+                break
+                ;;
+            unavailable|indisponible)
+                # Essayer de forcer NM à reprendre le device
+                nmcli dev set wlan0 managed yes 2>/dev/null || true
+                sleep 1
+                ;;
+            *)
+                sleep 1
+                ;;
+        esac
+    done
+else
+    log "Pas d'interface wlan0 — hotspot non démarré"
+    ip link 2>&1 | head -20
+fi
+
+# ------------------------------------------------------------------ #
+#  3. Créer le hotspot WiFi                                           #
+# ------------------------------------------------------------------ #
+if [ "$WLAN_READY" = "1" ]; then
+    log "wlan0 prêt — création du hotspot..."
 
     # Supprimer l'ancienne connexion si elle existe
     nmcli con delete "${HOTSPOT_CON}" 2>/dev/null || true
 
-    # Créer et activer le hotspot en une seule commande (device explicite)
     if nmcli dev wifi hotspot \
             ifname wlan0 \
             con-name "${HOTSPOT_CON}" \
@@ -40,12 +73,13 @@ if ip link show wlan0 &>/dev/null; then
         log "Hotspot '${HOTSPOT_SSID}' actif — IP RPi : 10.42.0.1"
     else
         log "ERREUR : nmcli dev wifi hotspot a échoué (code $?)"
-        # Afficher l'état des devices NM pour diagnostiquer
-        nmcli dev status >> "$LOG" 2>&1 || true
+        nmcli dev status 2>&1
+        rfkill list 2>&1
     fi
-else
-    log "Pas d'interface wlan0 — hotspot non démarré"
-    ip link >> "$LOG" 2>&1 || true
+elif ip link show wlan0 &>/dev/null; then
+    log "ERREUR : wlan0 toujours indisponible après 30s — état NM :"
+    nmcli dev status 2>&1
+    rfkill list 2>&1
 fi
 
 # ------------------------------------------------------------------ #
