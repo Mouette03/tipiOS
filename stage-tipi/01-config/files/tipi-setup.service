@@ -13,7 +13,9 @@ StandardError=journal
 SyslogIdentifier=tipi-setup
 # Redémarre uniquement si crash inattendu, pas si arrêt volontaire (code 0)
 Restart=on-failure
-RestartSec=5
+RestartSec=10
+StartLimitIntervalSec=120
+StartLimitBurst=5
 
 [Install]
 WantedBy=multi-user.target
