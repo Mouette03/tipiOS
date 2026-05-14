@@ -26,6 +26,13 @@ touch "${ROOTFS_DIR}/var/lib/tipi-setup/.not-configured"
 
 # ---- Activation dans le chroot ----
 on_chroot << EOF
+# ---- Désactiver le wizard de premier démarrage RPi OS ----
+# userconfig.service affiche "Please enter new username" — on gère ça via le portail web
+systemctl disable userconfig.service 2>/dev/null || true
+systemctl disable rpi-first-boot-wizard.service 2>/dev/null || true
+# Supprimer le fichier déclencheur du wizard s'il existe
+rm -f /etc/xdg/autostart/piwiz.desktop 2>/dev/null || true
+
 # Activer le service tipi-setup
 systemctl enable tipi-setup.service
 
