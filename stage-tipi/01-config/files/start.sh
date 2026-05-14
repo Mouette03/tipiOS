@@ -11,8 +11,6 @@ LOG="/boot/firmware/tipi-setup.log"
 
 log() { echo "[tipi-setup] $*"; }
 
-# Rediriger toute la sortie (stdout + stderr) vers le log + console
-exec > >(tee -a "$LOG") 2>&1
 log "=== Démarrage tipi-setup $(date) ==="
 
 # ------------------------------------------------------------------ #

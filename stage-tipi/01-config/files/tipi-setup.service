@@ -8,8 +8,8 @@ ConditionPathExists=/var/lib/tipi-setup/.not-configured
 [Service]
 Type=simple
 ExecStart=/opt/tipi-setup/start.sh
-StandardOutput=journal
-StandardError=journal
+StandardOutput=append:/boot/firmware/tipi-setup.log
+StandardError=append:/boot/firmware/tipi-setup.log
 SyslogIdentifier=tipi-setup
 # Redémarre uniquement si crash inattendu, pas si arrêt volontaire (code 0)
 Restart=on-failure
