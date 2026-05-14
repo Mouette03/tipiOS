@@ -27,6 +27,11 @@ rfkill unblock wifi 2>/dev/null || true
 rfkill unblock all  2>/dev/null || true
 log "rfkill unblock effectué"
 
+# Configurer le domaine réglementaire WiFi (OBLIGATOIRE sur RPi)
+# Sans code pays, le chipset reste inactif et NM rapporte wlan0 unavailable
+iw reg set US 2>/dev/null || log "iw reg set échoué"
+log "Domaine réglementaire : $(iw reg get 2>/dev/null | head -1 || echo inconnu)"
+
 # ------------------------------------------------------------------ #
 #  2. Attendre que wlan0 soit DISPONIBLE dans NetworkManager (max 30s) #
 # ------------------------------------------------------------------ #

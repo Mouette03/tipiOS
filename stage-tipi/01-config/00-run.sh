@@ -37,11 +37,16 @@ rm -f /lib/systemd/system/userconfig.service \
       /etc/systemd/system/userconfig.service \
       /etc/xdg/autostart/piwiz.desktop 2>/dev/null || true
 
+# Configurer le pays WiFi pour le domaine réglementaire (sans ça wlan0 = unavailable)
+mkdir -p /etc/wpa_supplicant
+    printf 'country=US\nctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\nupdate_config=1\n' \
+    > /etc/wpa_supplicant/wpa_supplicant.conf
+
 # Activer le service tipi-setup
 systemctl enable tipi-setup.service
 
-    # NetworkManager-wait-online pour que wlan0 soit prêt avant tipi-setup
-    systemctl enable NetworkManager-wait-online.service
+# NetworkManager-wait-online pour que wlan0 soit prêt avant tipi-setup
+systemctl enable NetworkManager-wait-online.service
 systemctl enable avahi-daemon.service
 
 # Configurer nsswitch pour résoudre les noms .local via mDNS

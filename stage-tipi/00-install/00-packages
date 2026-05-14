@@ -7,3 +7,6 @@ git
 network-manager
 dnsmasq
 ca-certificates
+wpasupplicant
+iw
+wireless-regdb
