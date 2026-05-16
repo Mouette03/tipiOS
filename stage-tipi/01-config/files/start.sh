@@ -24,9 +24,6 @@ rfkill unblock wifi 2>/dev/null || true
 rfkill unblock all  2>/dev/null || true
 log "rfkill unblock effectué"
 
-iw reg set US 2>/dev/null || true
-log "Domaine réglementaire : $(iw reg get 2>/dev/null | head -1 || echo inconnu)"
-
 # ------------------------------------------------------------------ #
 #  2. Hotspot : créer seulement s'il n'est pas déjà actif             #
 # ------------------------------------------------------------------ #
@@ -69,7 +66,9 @@ elif ip link show wlan0 &>/dev/null; then
                 ifname wlan0 \
                 con-name "${HOTSPOT_CON}" \
                 ssid "${HOTSPOT_SSID}" \
-                password "${HOTSPOT_PSK}"; then
+                password "${HOTSPOT_PSK}" \
+                band bg \
+                channel 6; then
             log "Hotspot '${HOTSPOT_SSID}' actif — IP RPi : 10.42.0.1"
         else
             log "ERREUR hotspot (code $?) — état NM :"
