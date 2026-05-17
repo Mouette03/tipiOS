@@ -37,16 +37,20 @@ rm -f /lib/systemd/system/userconfig.service \
       /etc/systemd/system/userconfig.service \
       /etc/xdg/autostart/piwiz.desktop 2>/dev/null || true
 
-# Configurer le pays WiFi pour le domaine réglementaire (sans ça wlan0 = unavailable)
+# ---- Domaine réglementaire WiFi (brcmfmac / RPi 4+5) ----
+# cfg80211 = couche WiFi kernel, ieee80211_regdom s'applique avant que brcmfmac verrouille
+echo 'options cfg80211 ieee80211_regdom=US' > /etc/modprobe.d/cfg80211.conf
+# CRDA fallback
+echo 'REGDOMAIN=US' > /etc/default/crda
+# wpa_supplicant.conf : NM lit ce fichier via son plugin wpa_supplicant
 mkdir -p /etc/wpa_supplicant
-    printf 'country=US\nctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\nupdate_config=1\n' \
+printf 'country=US\nctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\nupdate_config=1\n' \
     > /etc/wpa_supplicant/wpa_supplicant.conf
+# Désactiver le service wpa_supplicant standalone (NM le gère en interne)
+systemctl disable wpa_supplicant.service 2>/dev/null || true
 
 # Activer le service tipi-setup
 systemctl enable tipi-setup.service
-
-# NetworkManager-wait-online pour que wlan0 soit prêt avant tipi-setup
-systemctl enable NetworkManager-wait-online.service
 systemctl enable avahi-daemon.service
 
 # Configurer nsswitch pour résoudre les noms .local via mDNS
@@ -56,8 +60,6 @@ sed -i 's/^hosts:.*/hosts:          files mdns4_minimal [NOTFOUND=return] dns/' 
 echo "tipisetup" > /etc/hostname
 sed -i '/127\.0\.1\.1/d' /etc/hosts
 echo "127.0.1.1   tipisetup" >> /etc/hosts
-
-echo 'FLASK_TEMPLATE_FOLDER=/opt/tipi-setup/templates' >> /etc/environment
 
 set +x
 EOF

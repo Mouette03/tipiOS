@@ -28,7 +28,8 @@ log "rfkill unblock effectué"
 #  2. Hotspot : créer seulement s'il n'est pas déjà actif             #
 # ------------------------------------------------------------------ #
 hotspot_active() {
-    nmcli -t -f NAME,STATE con show --active 2>/dev/null | grep -q "^${HOTSPOT_CON}:activated"
+    # Vérifie directement si wlan0 a l'IP du hotspot (indépendant de la locale nmcli)
+    ip -4 addr show wlan0 2>/dev/null | grep -q "inet 10\.42\."
 }
 
 if hotspot_active; then
