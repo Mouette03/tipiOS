@@ -6,7 +6,6 @@
 
 HOTSPOT_SSID="TipiSetup"
 HOTSPOT_IP="10.42.0.1"
-HOSTAPD_CONF="/etc/hostapd/tipi-hostapd.conf"
 DNSMASQ_PID="/run/tipi-dnsmasq.pid"
 HOSTAPD_PID="/run/tipi-hostapd.pid"
 

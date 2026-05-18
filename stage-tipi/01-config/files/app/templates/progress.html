@@ -11,6 +11,16 @@
     <strong>✅ runTipi est prêt !</strong><br>
     <span id="result-links"></span>
   </div>
+  <div style="margin-top:1rem;text-align:center">
+    <button id="reboot-btn" onclick="doReboot()" style="display:none;
+      padding:0.65rem 1.5rem;font-size:0.9rem;border-radius:var(--radius);
+      border:none;background:#6366f1;color:#fff;cursor:pointer;font-weight:600">
+      🔄 Redémarrer le Raspberry Pi
+    </button>
+    <p id="reboot-msg" style="display:none;color:var(--muted);font-size:0.82rem;margin-top:0.6rem">
+      Redémarrage en cours… Reconnectez-vous dans quelques instants via l'adresse indiquée.
+    </p>
+  </div>
 </div>
 
 <!-- Barre de progression -->
@@ -118,6 +128,9 @@
           `<a href="http://${hostname}.local:3000" target="_blank" style="color:#6ee7b7">http://${hostname}.local:3000</a>`;
       }
       links.innerHTML = html || "Voir l'adresse IP de votre Raspberry Pi";
+
+      // Afficher le bouton reboot
+      document.getElementById("reboot-btn").style.display = "";
     } else {
       appendLog(msg, level);
     }
@@ -133,5 +146,17 @@
       }
     }, 5000);
   };
+
+  async function doReboot() {
+    const btn = document.getElementById("reboot-btn");
+    const msg = document.getElementById("reboot-msg");
+    btn.disabled = true;
+    btn.textContent = "⏳ Redémarrage…";
+    try {
+      await fetch("/reboot", { method: "POST" });
+    } catch (_) { /* connexion coupée = normal */ }
+    btn.style.display = "none";
+    msg.style.display = "";
+  }
 </script>
 {% endblock %}

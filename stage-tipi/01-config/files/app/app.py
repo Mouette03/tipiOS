@@ -147,9 +147,7 @@ def handle_captive_portal():
 
 @app.route("/")
 def index():
-    if ethernet_connected():
-        return redirect("/configure")
-    return redirect("/wifi")
+    return redirect("/configure")
 
 
 @app.route("/wifi")
@@ -235,6 +233,9 @@ def apply_config():
     if static_gw and not ip_pattern.match(static_gw):
         static_gw = ""
 
+    wifi_ssid = request.form.get("wifi_ssid", "").strip()
+    wifi_password = request.form.get("wifi_password", "").strip()
+
     _config = {
         "hostname":              hostname,
         "username":              username,
@@ -247,6 +248,8 @@ def apply_config():
         "static_ip":             static_ip,
         "static_gw":             static_gw,
         "static_dns":            static_dns,
+        "wifi_ssid":             wifi_ssid,
+        "wifi_password":         wifi_password,
     }
 
     return redirect("/progress")
@@ -278,6 +281,16 @@ def _run_setup():
     def err(msg):   _append_log(msg, "error")
     def out(msg):   _append_log(msg, "log")
 
+    try:
+        _run_setup_inner(step, done, err, out)
+    except Exception as e:
+        _append_log(f"Erreur inattendue du thread : {e}", "error")
+    finally:
+        _setup_done = True
+
+
+def _run_setup_inner(step, done, err, out):
+
     # Écriture de la config dans un fichier temporaire (évite les env vars avec mdp)
     config_path = "/tmp/tipi-config.json"
     try:
@@ -286,18 +299,21 @@ def _run_setup():
         os.chmod(config_path, 0o600)
     except Exception as e:
         err(f"Impossible d'écrire la configuration : {e}")
-        _setup_done = True
         return
 
     step("Démarrage de la configuration système...")
 
-    process = subprocess.Popen(
-        ["python3", "/opt/tipi-setup/setup.py", config_path],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        bufsize=1,
-    )
+    try:
+        process = subprocess.Popen(
+            ["python3", "/opt/tipi-setup/setup.py", config_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
+    except Exception as e:
+        err(f"Impossible de lancer setup.py : {e}")
+        return
 
     final_ip = None
     for raw_line in iter(process.stdout.readline, ""):
@@ -334,14 +350,13 @@ def _run_setup():
 
     # Nettoyage : on désactive le service (ne se relancera plus au prochain boot)
     subprocess.run(["systemctl", "disable", "tipi-setup.service"], capture_output=True)
-    subprocess.run(["nmcli", "con", "down", "TipiHotspot"], capture_output=True)
-    subprocess.run(["nmcli", "con", "delete", "TipiHotspot"], capture_output=True)
+    # Arrêter hostapd/dnsmasq si toujours actifs (cas sans WiFi configuré)
+    subprocess.run(["pkill", "-f", "tipi-hostapd.conf"], capture_output=True)
+    subprocess.run(["pkill", "-f", "tipi-dnsmasq"], capture_output=True)
     try:
         os.remove("/var/lib/tipi-setup/.not-configured")
     except FileNotFoundError:
         pass
-
-    _setup_done = True
 
 
 @app.route("/progress/stream")
@@ -377,6 +392,16 @@ def progress_stream():
             "Connection":       "keep-alive",
         },
     )
+
+
+@app.route("/reboot", methods=["POST"])
+def reboot():
+    """Redémarre le Pi après un court délai (laisse la réponse partir)."""
+    def _do_reboot():
+        time.sleep(2)
+        subprocess.run(["systemctl", "reboot"], check=False)
+    threading.Thread(target=_do_reboot, daemon=True).start()
+    return jsonify({"ok": True})
 
 
 # ---------------------------------------------------------------------------

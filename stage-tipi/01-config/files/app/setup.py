@@ -228,6 +228,67 @@ def system_update():
     done("Système à jour")
 
 
+def connect_wifi(wifi_ssid: str, wifi_password: str):
+    """Connecte wlan0 au WiFi choisi — appelé EN DERNIER (coupe le hotspot)."""
+    if not wifi_ssid:
+        return
+    import time
+    step(f"Connexion WiFi → '{wifi_ssid}'...")
+    try:
+        # Arrêter hostapd et dnsmasq avant de rendre wlan0 à NM
+        subprocess.run(["pkill", "-f", "tipi-hostapd.conf"], capture_output=True)
+        subprocess.run(["pkill", "-f", "tipi-dnsmasq"], capture_output=True)
+        subprocess.run(["pkill", "hostapd"], capture_output=True)
+        time.sleep(1)
+        # Remettre wlan0 sous gestion NetworkManager
+        subprocess.run(["nmcli", "dev", "set", "wlan0", "managed", "yes"],
+                       capture_output=True)
+        time.sleep(2)
+
+        # Supprimer tout profil existant pour éviter les conflits de key-mgmt
+        subprocess.run(["nmcli", "con", "delete", "tipi-wifi"],
+                       capture_output=True)
+
+        # Créer un profil propre avec les paramètres de sécurité explicites
+        if wifi_password:
+            add_cmd = [
+                "nmcli", "con", "add",
+                "type", "wifi",
+                "ifname", "wlan0",
+                "con-name", "tipi-wifi",
+                "ssid", wifi_ssid,
+                "wifi-sec.key-mgmt", "wpa-psk",
+                "wifi-sec.psk", wifi_password,
+            ]
+        else:
+            # Réseau ouvert — pas de section sécurité
+            add_cmd = [
+                "nmcli", "con", "add",
+                "type", "wifi",
+                "ifname", "wlan0",
+                "con-name", "tipi-wifi",
+                "ssid", wifi_ssid,
+            ]
+
+        result = subprocess.run(add_cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            err(f"WiFi — création profil : {(result.stderr or result.stdout).strip()}")
+            return
+
+        result = subprocess.run(
+            ["nmcli", "con", "up", "tipi-wifi"],
+            capture_output=True, text=True, timeout=40,
+        )
+        if result.returncode == 0:
+            done(f"WiFi connecté : {wifi_ssid}")
+        else:
+            err(f"WiFi — connexion échouée : {(result.stderr or result.stdout).strip()}")
+    except subprocess.TimeoutExpired:
+        err("WiFi — délai dépassé (40 s)")
+    except Exception as e:
+        err(f"WiFi : {e}")
+
+
 def install_runtipi():
     step("Installation de runTipi (Docker inclus — patience)...")
     try:
@@ -313,6 +374,8 @@ def main():
     static_ip            = cfg.get("static_ip", "")
     static_gw            = cfg.get("static_gw", "")
     static_dns           = cfg.get("static_dns", "8.8.8.8")
+    wifi_ssid             = cfg.get("wifi_ssid", "").strip()
+    wifi_password         = cfg.get("wifi_password", "").strip()
 
     # Validation minimale
     if not username or not password:
@@ -328,6 +391,10 @@ def main():
     configure_ssh(ssh_port, disable_password_auth, ssh_key)
     configure_static_ip(static_ip, static_gw, static_dns)
     system_update()
+    # WiFi EN DERNIER : coupe le hotspot, l'utilisateur voit la page progress jusqu'au bout
+    if wifi_ssid:
+        step(f"⚠️ Le hotspot va s'arrêter — reconnectez-vous à votre WiFi puis ouvrez http://{hostname}.local")
+    connect_wifi(wifi_ssid, wifi_password)
     install_runtipi()
 
     # --- Affichage de l'IP finale ---
