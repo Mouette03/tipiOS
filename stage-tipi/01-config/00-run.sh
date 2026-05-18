@@ -5,7 +5,7 @@
 # ---- Arborescence ----
 install -v -d "${ROOTFS_DIR}/opt/tipi-setup/templates"
 install -v -d "${ROOTFS_DIR}/var/lib/tipi-setup"
-install -v -d "${ROOTFS_DIR}/etc/NetworkManager/dnsmasq-shared.d"
+install -v -d "${ROOTFS_DIR}/etc/hostapd"
 
 # ---- Fichiers de l'application ----
 install -v -m 755 files/start.sh                          "${ROOTFS_DIR}/opt/tipi-setup/start.sh"
@@ -19,15 +19,9 @@ install -v -m 644 files/app/templates/progress.html       "${ROOTFS_DIR}/opt/tip
 # ---- Systemd service ----
 install -v -m 644 files/tipi-setup.service                "${ROOTFS_DIR}/etc/systemd/system/tipi-setup.service"
 
-# ---- DNS captif (NetworkManager hotspot) ----
-install -v -m 644 files/dnsmasq-captive.conf              "${ROOTFS_DIR}/etc/NetworkManager/dnsmasq-shared.d/captive-portal.conf"
-
-# ---- Règle udev : domaine réglementaire WiFi dès apparition de wlan0 ----
-install -v -d "${ROOTFS_DIR}/etc/udev/rules.d"
-cat > "${ROOTFS_DIR}/etc/udev/rules.d/10-wifi-regdomain.rules" << 'UDEVRULE'
-# Applique le domaine réglementaire WiFi dès que wlan0 apparaît (avant NM)
-SUBSYSTEM=="net", ACTION=="add", KERNEL=="wlan*", RUN+="/sbin/iw reg set US"
-UDEVRULE
+# ---- hostapd : configuration du hotspot (country_code=US natif) ----
+# Ref : même approche que RaspAP — seule méthode fiable pour brcmfmac (RPi 4/5)
+install -v -m 600 files/hostapd.conf                      "${ROOTFS_DIR}/etc/hostapd/tipi-hostapd.conf"
 
 # ---- Marqueur de premier démarrage ----
 touch "${ROOTFS_DIR}/var/lib/tipi-setup/.not-configured"
@@ -44,19 +38,14 @@ rm -f /lib/systemd/system/userconfig.service \
       /etc/systemd/system/userconfig.service \
       /etc/xdg/autostart/piwiz.desktop 2>/dev/null || true
 
-# ---- Domaine réglementaire WiFi (brcmfmac / RPi 4+5) ----
-# cfg80211 = couche WiFi kernel, ieee80211_regdom s'applique avant que brcmfmac verrouille
-echo 'options cfg80211 ieee80211_regdom=US' > /etc/modprobe.d/cfg80211.conf
-# CRDA fallback
-echo 'REGDOMAIN=US' > /etc/default/crda
-# wpa_supplicant.conf : NM lit ce fichier via son plugin wpa_supplicant
-mkdir -p /etc/wpa_supplicant
-printf 'country=US\nctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev\nupdate_config=1\n' \
-    > /etc/wpa_supplicant/wpa_supplicant.conf
-# Désactiver le service wpa_supplicant standalone (NM le gère en interne)
+# ---- Désactiver le service hostapd système (on le lance depuis start.sh) ----
+systemctl disable hostapd.service 2>/dev/null || true
+systemctl mask hostapd.service    2>/dev/null || true
+
+# ---- Désactiver le service wpa_supplicant standalone (NM le gère en interne) ----
 systemctl disable wpa_supplicant.service 2>/dev/null || true
 
-# Activer le service tipi-setup
+# ---- Activer le service tipi-setup ----
 systemctl enable tipi-setup.service
 systemctl enable avahi-daemon.service
 

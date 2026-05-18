@@ -5,6 +5,7 @@ libnss-mdns
 curl
 git
 network-manager
+hostapd
 dnsmasq
 ca-certificates
 wpasupplicant

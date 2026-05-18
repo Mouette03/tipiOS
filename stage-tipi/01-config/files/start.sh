@@ -1,98 +1,99 @@
 #!/bin/bash
 # TipiOS — Script de démarrage du portail de configuration
 # Lancé par systemd au premier démarrage uniquement.
-
-# PAS de set -e : on veut gérer chaque erreur nous-mêmes sans tuer le script
+# Utilise hostapd directement (country_code=US) + dnsmasq pour DHCP.
+# Ref : même approche que RaspAP — seule méthode fiable sur brcmfmac (RPi 4/5).
 
 HOTSPOT_SSID="TipiSetup"
-HOTSPOT_PSK="TipiSetup2024!"
-HOTSPOT_CON="TipiHotspot"
-LOG="/boot/firmware/tipi-setup.log"
+HOTSPOT_IP="10.42.0.1"
+HOSTAPD_CONF="/etc/hostapd/tipi-hostapd.conf"
+DNSMASQ_PID="/run/tipi-dnsmasq.pid"
+HOSTAPD_PID="/run/tipi-hostapd.pid"
 
 log() { echo "[tipi-setup] $*"; }
 
 log "=== Démarrage tipi-setup $(date) ==="
 
 # ------------------------------------------------------------------ #
-#  1. Attendre NetworkManager + débloquer le WiFi                     #
+#  1. Débloquer le WiFi                                               #
 # ------------------------------------------------------------------ #
-for i in $(seq 1 15); do
-    nmcli general status 2>/dev/null | grep -q 'connecté\|connected\|disconnected\|déconnecté' && break || sleep 1
-done
-
 rfkill unblock wifi 2>/dev/null || true
 rfkill unblock all  2>/dev/null || true
 log "rfkill unblock effectué"
 
 # ------------------------------------------------------------------ #
-#  2. Hotspot : créer seulement s'il n'est pas déjà actif             #
+#  2. Attendre l'interface wlan0 (max 30s)                            #
+# ------------------------------------------------------------------ #
+log "Attente interface wlan0..."
+WLAN_OK=0
+for i in $(seq 1 30); do
+    ip link show wlan0 &>/dev/null && WLAN_OK=1 && break
+    sleep 1
+done
+
+if [ "$WLAN_OK" = "0" ]; then
+    log "ERREUR : wlan0 absente après 30s — hotspot impossible"
+    ip link 2>&1 | head -10 || true
+fi
+
+# ------------------------------------------------------------------ #
+#  3. Hotspot via hostapd (country_code natif dans la config)         #
 # ------------------------------------------------------------------ #
 hotspot_active() {
-    # Vérifie directement si wlan0 a l'IP du hotspot (indépendant de la locale nmcli)
     ip -4 addr show wlan0 2>/dev/null | grep -q "inet 10\.42\."
 }
 
 if hotspot_active; then
     log "Hotspot '${HOTSPOT_SSID}' déjà actif — skip création"
-elif ip link show wlan0 &>/dev/null; then
-    log "Interface wlan0 présente — attente disponibilité NM (max 30s)..."
-    WLAN_READY=0
-    for i in $(seq 1 30); do
-        state=$(nmcli -t -f DEVICE,STATE dev status 2>/dev/null | grep "^wlan0:" | cut -d: -f2)
-        case "$state" in
-            disconnected|déconnecté)
-                WLAN_READY=1
-                log "wlan0 prêt (état: $state) après ${i}s"
-                break
-                ;;
-            unavailable|indisponible)
-                nmcli dev set wlan0 managed yes 2>/dev/null || true
-                sleep 1
-                ;;
-            connected|connecté)
-                # wlan0 déjà connecté à un réseau — on essaie quand même le mode AP
-                WLAN_READY=1
-                log "wlan0 connecté — tentative hotspot en parallèle"
-                break
-                ;;
-            *)
-                sleep 1
-                ;;
-        esac
-    done
+elif [ "$WLAN_OK" = "1" ]; then
+    log "Création du hotspot avec hostapd..."
 
-    if [ "$WLAN_READY" = "1" ]; then
-        nmcli con delete "${HOTSPOT_CON}" 2>/dev/null || true
-        if nmcli dev wifi hotspot \
-                ifname wlan0 \
-                con-name "${HOTSPOT_CON}" \
-                ssid "${HOTSPOT_SSID}" \
-                password "${HOTSPOT_PSK}" \
-                band bg \
-                channel 6; then
-            log "Hotspot '${HOTSPOT_SSID}' actif — IP RPi : 10.42.0.1"
-            # Laisser 3s pour que les beacon frames commencent à broadcaster
-            sleep 3
-            log "État radio wlan0 :"
-            iw dev wlan0 info 2>&1 || true
-            log "Domaine réglementaire :"
-            iw reg get 2>&1 | head -5 || true
-        else
-            log "ERREUR hotspot (code $?) — état NM :"
-            nmcli dev status 2>&1 || true
-            rfkill list 2>&1 || true
-        fi
+    # Sortir wlan0 de la gestion NetworkManager pour qu'hostapd puisse s'en emparer
+    nmcli dev set wlan0 managed no 2>/dev/null || true
+    sleep 1
+
+    # Éteindre/rallumer wlan0 pour sortir de tout état précédent
+    ip link set wlan0 down  2>/dev/null || true
+    sleep 1
+    ip link set wlan0 up    2>/dev/null || true
+
+    # Assigner l'IP du point d'accès
+    ip addr flush dev wlan0 2>/dev/null || true
+    ip addr add "${HOTSPOT_IP}/24" dev wlan0
+
+    # Lancer hostapd en daemon
+    if hostapd -B -P "${HOSTAPD_PID}" "${HOSTAPD_CONF}"; then
+        log "hostapd OK — SSID '${HOTSPOT_SSID}' en broadcast sur canal 6"
     else
-        log "ERREUR : wlan0 toujours indisponible après 30s"
-        nmcli dev status 2>&1 || true
+        log "ERREUR hostapd (code $?) — diagnostic :"
+        iw dev wlan0 info   2>&1 || true
+        iw reg get          2>&1 | head -10 || true
+        rfkill list         2>&1 || true
     fi
-else
-    log "Pas d'interface wlan0 — hotspot ignoré"
-    ip link 2>&1 | head -10 || true
+
+    # Lancer dnsmasq pour le DHCP sur wlan0
+    dnsmasq \
+        --interface=wlan0 \
+        --bind-interfaces \
+        --except-interface=lo \
+        --dhcp-range=10.42.0.100,10.42.0.200,12h \
+        --dhcp-option=3,"${HOTSPOT_IP}" \
+        --dhcp-option=6,"${HOTSPOT_IP}" \
+        --no-resolv \
+        --no-poll \
+        --pid-file="${DNSMASQ_PID}" 2>&1 | while read -r l; do log "dnsmasq: $l"; done &
+
+    # Attendre que le AP soit visible
+    sleep 3
+    log "État radio wlan0 :"
+    iw dev wlan0 info 2>&1 || true
+    log "Domaine réglementaire :"
+    iw reg get 2>&1 | head -5 || true
+    log "Hotspot '${HOTSPOT_SSID}' — IP RPi : ${HOTSPOT_IP}"
 fi
 
 # ------------------------------------------------------------------ #
-#  3. Lancement du portail web Flask (port 80)                        #
+#  4. Lancement du portail web Flask (port 80)                        #
 # ------------------------------------------------------------------ #
 log "Démarrage du portail de configuration (port 80)..."
 python3 /opt/tipi-setup/app.py
