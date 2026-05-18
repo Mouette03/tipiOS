@@ -22,6 +22,13 @@ install -v -m 644 files/tipi-setup.service                "${ROOTFS_DIR}/etc/sys
 # ---- DNS captif (NetworkManager hotspot) ----
 install -v -m 644 files/dnsmasq-captive.conf              "${ROOTFS_DIR}/etc/NetworkManager/dnsmasq-shared.d/captive-portal.conf"
 
+# ---- Règle udev : domaine réglementaire WiFi dès apparition de wlan0 ----
+install -v -d "${ROOTFS_DIR}/etc/udev/rules.d"
+cat > "${ROOTFS_DIR}/etc/udev/rules.d/10-wifi-regdomain.rules" << 'UDEVRULE'
+# Applique le domaine réglementaire WiFi dès que wlan0 apparaît (avant NM)
+SUBSYSTEM=="net", ACTION=="add", KERNEL=="wlan*", RUN+="/sbin/iw reg set US"
+UDEVRULE
+
 # ---- Marqueur de premier démarrage ----
 touch "${ROOTFS_DIR}/var/lib/tipi-setup/.not-configured"
 

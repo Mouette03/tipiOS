@@ -71,6 +71,12 @@ elif ip link show wlan0 &>/dev/null; then
                 band bg \
                 channel 6; then
             log "Hotspot '${HOTSPOT_SSID}' actif — IP RPi : 10.42.0.1"
+            # Laisser 3s pour que les beacon frames commencent à broadcaster
+            sleep 3
+            log "État radio wlan0 :"
+            iw dev wlan0 info 2>&1 || true
+            log "Domaine réglementaire :"
+            iw reg get 2>&1 | head -5 || true
         else
             log "ERREUR hotspot (code $?) — état NM :"
             nmcli dev status 2>&1 || true
