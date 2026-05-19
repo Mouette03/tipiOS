@@ -15,6 +15,8 @@ install -v -m 644 files/app/templates/base.html           "${ROOTFS_DIR}/opt/tip
 install -v -m 644 files/app/templates/wifi.html           "${ROOTFS_DIR}/opt/tipi-setup/templates/wifi.html"
 install -v -m 644 files/app/templates/configure.html      "${ROOTFS_DIR}/opt/tipi-setup/templates/configure.html"
 install -v -m 644 files/app/templates/progress.html       "${ROOTFS_DIR}/opt/tipi-setup/templates/progress.html"
+install -d                                                 "${ROOTFS_DIR}/opt/tipi-setup/static"
+install -v -m 644 files/app/static/favicon.ico            "${ROOTFS_DIR}/opt/tipi-setup/static/favicon.ico"
 
 # ---- Systemd service ----
 install -v -m 644 files/tipi-setup.service                "${ROOTFS_DIR}/etc/systemd/system/tipi-setup.service"

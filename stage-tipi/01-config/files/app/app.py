@@ -19,7 +19,8 @@ from flask import Flask, Response, jsonify, redirect, render_template, request
 # Init Flask
 # ---------------------------------------------------------------------------
 TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), "templates")
-app = Flask(__name__, template_folder=TEMPLATE_DIR)
+STATIC_DIR  = os.path.join(os.path.dirname(__file__), "static")
+app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
 app.secret_key = os.urandom(32)
 
 # ---------------------------------------------------------------------------
