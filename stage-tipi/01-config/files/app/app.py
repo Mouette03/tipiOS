@@ -148,6 +148,8 @@ def handle_captive_portal():
 
 @app.route("/")
 def index():
+    if _setup_started:
+        return redirect("/progress")
     return redirect("/configure")
 
 
@@ -252,6 +254,14 @@ def apply_config():
         "wifi_ssid":             wifi_ssid,
         "wifi_password":         wifi_password,
     }
+
+    # Lancer le thread dès maintenant (ne pas attendre que le SSE se connecte)
+    with _setup_lock:
+        global _setup_started
+        if not _setup_started:
+            _setup_started = True
+            t = threading.Thread(target=_run_setup, daemon=True)
+            t.start()
 
     return redirect("/progress")
 
@@ -362,14 +372,7 @@ def _run_setup_inner(step, done, err, out):
 
 @app.route("/progress/stream")
 def progress_stream():
-    global _setup_started
-
-    with _setup_lock:
-        if not _setup_started:
-            _setup_started = True
-            t = threading.Thread(target=_run_setup, daemon=True)
-            t.start()
-
+    # Le thread est déjà démarré par apply_config — on streame simplement le log
     def generate():
         sent = 0
         while True:

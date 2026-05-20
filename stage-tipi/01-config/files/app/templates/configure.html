@@ -122,24 +122,24 @@
 
   <h3 style="margin-bottom:0.75rem;font-size:1rem">Connexion WiFi <span style="color:var(--muted);font-weight:400;font-size:0.85rem">(optionnel — si pas d'Ethernet)</span></h3>
 
-  <div class="alert" id="wifi-warning" style="display:none;background:#fff8e1;border-left:4px solid #f59e0b;padding:0.85rem 1rem;border-radius:var(--radius);margin-bottom:1rem;font-size:0.85rem;line-height:1.55">
+  <div class="alert" id="wifi-warning" style="display:none;background:#fff8e1;color:#5a3e00;border-left:4px solid #f59e0b;padding:0.85rem 1rem;border-radius:var(--radius);margin-bottom:1rem;font-size:0.85rem;line-height:1.55">
     ⚠️ <strong>La connexion au hotspot sera coupée</strong> dès que le Raspberry Pi rejoindra votre réseau WiFi.<br>
     Reconnectez-vous à votre WiFi, puis accédez à runTipi via&nbsp;:
-    <br><code id="mdns-link" style="font-size:1rem;font-weight:700;display:inline-block;margin-top:0.35rem">http://<span id="mdns-hostname">tipisetup</span>.local</code>
-    <br><span style="color:var(--muted);font-size:0.78rem">(mDNS — fonctionne sur macOS, Windows 10+ et Linux avec avahi)</span>
+    <br><code id="mdns-link" style="font-size:1rem;font-weight:700;display:inline-block;margin-top:0.35rem;color:#7c4f00">http://<span id="mdns-hostname">tipisetup</span>.local</code>
+    <br><span style="color:#7c5e00;font-size:0.78rem">(mDNS — fonctionne sur macOS, Windows 10+ et Linux avec avahi)</span>
   </div>
 
   <div class="field">
     <label>Nom du réseau WiFi (SSID)</label>
     <div style="display:flex;gap:0.5rem;align-items:center">
-      <input type="text" name="wifi_ssid" id="wifi_ssid" list="wifi-list"
+      <input type="text" name="wifi_ssid" id="wifi_ssid"
              placeholder="Saisir le nom du réseau (ou cliquer Rechercher)" autocomplete="off" style="flex:1">
-      <datalist id="wifi-list"></datalist>
       <button type="button" id="scan-btn" onclick="scanWifi()"
-        style="padding:0.5rem 0.9rem;font-size:0.82rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);cursor:pointer;white-space:nowrap">
+        style="padding:0.5rem 0.9rem;font-size:0.82rem;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap">
         🔍 Rechercher
       </button>
     </div>
+    <div id="wifi-results" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-top:4px;max-height:180px;overflow-y:auto"></div>
     <small id="scan-status" style="color:var(--muted);font-size:0.72rem"></small>
   </div>
 
@@ -168,29 +168,40 @@
     el.type = el.type === "password" ? "text" : "password";
   }
 
-  // Scan WiFi et peuplement de la datalist
+  // Scan WiFi et affichage de la liste cliquable
   async function scanWifi() {
     const btn = document.getElementById("scan-btn");
     const status = document.getElementById("scan-status");
-    const dl = document.getElementById("wifi-list");
+    const results = document.getElementById("wifi-results");
+    const input = document.getElementById("wifi_ssid");
     btn.disabled = true;
     btn.textContent = "⏳ Scan…";
     status.textContent = "Recherche des réseaux…";
+    results.style.display = "none";
+    results.innerHTML = "";
     try {
       const res = await fetch("/wifi/rescan");
       const networks = await res.json();
-      // Vider la datalist
-      dl.innerHTML = "";
       if (networks.length === 0) {
         status.textContent = "Aucun réseau trouvé — saisissez le nom manuellement.";
       } else {
         networks.forEach(n => {
-          const opt = document.createElement("option");
-          opt.value = n.ssid;
-          opt.label = `${n.signal}%${n.has_password ? " 🔒" : ""}`;
-          dl.appendChild(opt);
+          const row = document.createElement("div");
+          row.style.cssText = "padding:0.55rem 0.75rem;cursor:pointer;font-size:0.85rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;color:var(--text)";
+          row.innerHTML = `<span>${n.ssid}</span><span style="color:var(--muted);font-size:0.75rem">${n.signal}%${n.has_password ? " 🔒" : ""}</span>`;
+          row.addEventListener("click", () => {
+            input.value = n.ssid;
+            results.style.display = "none";
+            document.getElementById("wifi-warning").style.display = "";
+            document.getElementById("mdns-hostname").textContent =
+              document.querySelector("input[name='hostname']").value.trim() || "tipisetup";
+          });
+          row.addEventListener("mouseover", () => row.style.background = "var(--border)");
+          row.addEventListener("mouseout",  () => row.style.background = "");
+          results.appendChild(row);
         });
-        status.textContent = `${networks.length} réseau(x) trouvé(s) — sélectionnez ou saisissez le nom.`;
+        results.style.display = "";
+        status.textContent = `${networks.length} réseau(x) trouvé(s) — appuyez pour sélectionner.`;
       }
     } catch(e) {
       status.textContent = "Erreur lors du scan — saisissez le nom manuellement.";

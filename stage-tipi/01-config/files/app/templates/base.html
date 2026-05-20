@@ -184,7 +184,7 @@
     <div class="tagline">Assistant de configuration — Premier démarrage</div>
 
     <nav class="steps">
-      {% set steps = [('Réseau', 'wifi'), ('Système', 'configure'), ('Installation', 'progress')] %}
+      {% set steps = [('Système', 'configure'), ('Installation', 'progress')] %}
       {% for label, route in steps %}
         {% set is_active = request.path.startswith('/' ~ route) %}
         {% set is_done   = loop.index < loop.index0 + 1 %}
