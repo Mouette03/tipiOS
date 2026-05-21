@@ -347,18 +347,6 @@ def _run_setup_inner(step, done, err, out):
     hostname = _config.get("hostname", "tipios")
     ssh_port = _config.get("ssh_port", "22")
 
-    if process.returncode == 0:
-        entry = {
-            "level":    "final",
-            "msg":      "Installation terminée avec succès !",
-            "ip":       final_ip,
-            "hostname": hostname,
-            "ssh_port": ssh_port,
-        }
-        _progress_log.append(entry)
-    else:
-        err("Une erreur est survenue. Consultez les logs ci-dessus.")
-
     # Nettoyage : on désactive le service (ne se relancera plus au prochain boot)
     subprocess.run(["systemctl", "disable", "tipi-setup.service"], capture_output=True)
     # Arrêter hostapd/dnsmasq si toujours actifs (cas sans WiFi configuré)
@@ -369,33 +357,28 @@ def _run_setup_inner(step, done, err, out):
     except FileNotFoundError:
         pass
 
+    if process.returncode == 0:
+        _progress_log.append({
+            "level":    "final",
+            "msg":      "Installation terminée ! Redémarrez le Pi pour lancer runTipi.",
+            "ip":       final_ip,
+            "hostname": hostname,
+            "ssh_port": ssh_port,
+        })
+    else:
+        err("Une erreur est survenue. Consultez les logs ci-dessus.")
 
-@app.route("/progress/stream")
-def progress_stream():
-    # Le thread est déjà démarré par apply_config — on streame simplement le log
-    def generate():
-        sent = 0
-        while True:
-            # Envoyer les nouvelles entrées du log
-            while sent < len(_progress_log):
-                yield f"data: {json.dumps(_progress_log[sent])}\n\n"
-                sent += 1
-            # Arrêter si terminé et tout envoyé
-            if _setup_done and sent >= len(_progress_log):
-                break
-            # Keepalive pour éviter timeout navigateur
-            yield ": keepalive\n\n"
-            time.sleep(0.3)
 
-    return Response(
-        generate(),
-        mimetype="text/event-stream",
-        headers={
-            "Cache-Control":    "no-cache",
-            "X-Accel-Buffering": "no",
-            "Connection":       "keep-alive",
-        },
-    )
+@app.route("/progress/log")
+def progress_log_poll():
+    """Polling endpoint — retourne les entrées du log depuis l'index `from`."""
+    since = request.args.get("from", 0, type=int)
+    entries = _progress_log[since:]
+    return jsonify({
+        "entries": entries,
+        "done":    _setup_done,
+        "total":   len(_progress_log),
+    })
 
 
 @app.route("/reboot", methods=["POST"])

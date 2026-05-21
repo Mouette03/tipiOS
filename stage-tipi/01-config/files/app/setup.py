@@ -317,12 +317,13 @@ def install_runtipi():
         curl.wait()
 
         if bash.returncode != 0:
-            raise RuntimeError(f"Le script runTipi a échoué (code {bash.returncode})")
-
-        done("runTipi installé avec succès !")
+            # Le script peut échouer à démarrer runTipi si le port 80 est pris ;
+            # le service systemd est déjà enregistré et démarrera au prochain reboot.
+            err(f"runTipi : le démarrage initial a échoué (code {bash.returncode}) — il démarrera au reboot.")
+        else:
+            done("runTipi installé avec succès !")
     except Exception as e:
         err(f"Installation runTipi : {e}")
-        sys.exit(1)
 
 
 def get_final_ip() -> str | None:

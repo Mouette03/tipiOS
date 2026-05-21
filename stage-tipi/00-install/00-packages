@@ -1,5 +1,6 @@
 python3-flask
 python3-full
+openssh-server
 avahi-daemon
 libnss-mdns
 curl
