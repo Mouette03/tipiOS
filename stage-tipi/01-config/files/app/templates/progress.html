@@ -61,6 +61,10 @@
   .log-log     { color: #94a3b8; }
   .log-final   { color: #fde68a; font-weight: bold; }
 </style>
+{% endblock %}
+
+{% block scripts %}
+<!-- Script après le DOM : les getElementById fonctionnent correctement -->
 <script>
   const STEPS = [
     "hostname", "timezone", "locale", "utilisateur", "ssh", "ip",

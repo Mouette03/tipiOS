@@ -50,6 +50,8 @@ systemctl disable wpa_supplicant.service 2>/dev/null || true
 # ---- Activer le service tipi-setup ----
 systemctl enable tipi-setup.service
 systemctl enable avahi-daemon.service
+# ---- Activer SSH (désactivé par défaut sur Trixie) ----
+systemctl enable ssh.service
 
 # Configurer nsswitch pour résoudre les noms .local via mDNS
 sed -i 's/^hosts:.*/hosts:          files mdns4_minimal [NOTFOUND=return] dns/' /etc/nsswitch.conf

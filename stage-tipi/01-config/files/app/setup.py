@@ -166,12 +166,22 @@ def configure_ssh(ssh_port: str, disable_password_auth: bool, ssh_key: str):
                 flags=re.MULTILINE,
             )
 
-        # Activer SSH (sécurité)
-        sshd = re.sub(r"^#?PermitRootLogin\s+\w+", "PermitRootLogin no", sshd, flags=re.MULTILINE)
+        # Activer SSH (sécurité) — matcher aussi "prohibit-password" (avec tiret)
+        sshd = re.sub(r"^#?PermitRootLogin\s+[\w-]+", "PermitRootLogin no", sshd, flags=re.MULTILINE)
 
         with open("/etc/ssh/sshd_config", "w") as f:
             f.write(sshd)
 
+        # Générer les clés hôtes si absentes (installé en chroot, jamais générées au boot)
+        subprocess.run(["ssh-keygen", "-A"], check=False)
+
+        # Vérifier la syntaxe de sshd_config avant de redémarrer
+        test = subprocess.run(["sshd", "-t"], capture_output=True, text=True)
+        if test.returncode != 0:
+            err(f"sshd_config invalide : {test.stderr.strip()} — SSH non redémarré")
+            return
+
+        subprocess.run(["systemctl", "enable", "ssh"], check=True)
         subprocess.run(["systemctl", "restart", "ssh"], check=True)
         done(f"SSH configuré sur le port {ssh_port}")
     except Exception as e:
@@ -317,11 +327,14 @@ def install_runtipi():
         curl.wait()
 
         if bash.returncode != 0:
-            # Le script peut échouer à démarrer runTipi si le port 80 est pris ;
-            # le service systemd est déjà enregistré et démarrera au prochain reboot.
-            err(f"runTipi : le démarrage initial a échoué (code {bash.returncode}) — il démarrera au reboot.")
+            # Le script peut échouer à démarrer runTipi si le port 80 est pris par Flask.
+            # Le service systemd est enregistré par le script d'install et démarrera au reboot.
+            err(f"runTipi : le démarrage initial a échoué (code {bash.returncode}) — il démarrera automatiquement au reboot.")
         else:
             done("runTipi installé avec succès !")
+
+        # S'assurer que le service systemd est activé pour l'autostart au reboot.
+        subprocess.run(["systemctl", "enable", "runtipi.service"], check=False, capture_output=True)
     except Exception as e:
         err(f"Installation runTipi : {e}")
 
