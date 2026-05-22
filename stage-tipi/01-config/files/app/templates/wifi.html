@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Connexion WiFi{% endblock %}
+{% block title %}{{ t('page_wifi_title') }}{% endblock %}
 
 {% block content %}
-<h2>Connexion au réseau WiFi</h2>
-<p class="subtitle">Sélectionnez votre réseau et saisissez le mot de passe.</p>
+<h2>{{ t('wifi_h2') }}</h2>
+<p class="subtitle">{{ t('wifi_subtitle') }}</p>
 
 <div id="alert-box"></div>
 
@@ -29,37 +29,36 @@
     {% endfor %}
   {% else %}
     <p style="color:var(--muted);font-size:0.85rem;text-align:center;padding:1rem 0">
-      Aucun réseau détecté.
+      {{ t('wifi_no_networks') }}
     </p>
   {% endif %}
 </div>
 
 <div style="display:flex;gap:0.5rem;margin-top:0.75rem">
-  <button class="btn btn-secondary" onclick="rescan()" id="rescan-btn">↺ Actualiser</button>
+  <button class="btn btn-secondary" onclick="rescan()" id="rescan-btn">↺ {{ t('btn_rescan') }}</button>
 </div>
 
 <!-- Formulaire de connexion (affiché après sélection) -->
 <div id="connect-form" style="display:none;margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--border)">
   <div class="field">
-    <label>Réseau sélectionné</label>
+    <label>{{ t('label_selected_net') }}</label>
     <input type="text" id="sel-ssid" readonly style="color:var(--accent2)">
   </div>
   <div class="field" id="pwd-field">
-    <label>Mot de passe WiFi</label>
+    <label>{{ t('label_wifi_password') }}</label>
     <div style="position:relative">
-      <input type="password" id="pwd" autocomplete="current-password" placeholder="Mot de passe">
+      <input type="password" id="pwd" autocomplete="current-password" placeholder="{{ t('placeholder_wifi_password') }}">
       <button type="button" onclick="togglePwd()" style="
         position:absolute;right:10px;top:50%;transform:translateY(-50%);
         background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem">👁</button>
     </div>
   </div>
-  <button class="btn btn-primary btn-full" id="connect-btn" onclick="connect()">Se connecter</button>
+  <button class="btn btn-primary btn-full" id="connect-btn" onclick="connect()">{{ t('btn_connect') }}</button>
 </div>
 {% endblock %}
 
 {% block head %}
-<style>
-  .network-item {
+<style>  .network-item {
     width: 100%;
     background: var(--bg);
     border: 1px solid var(--border);
@@ -93,6 +92,15 @@
   .bar.on { background: var(--accent2); }
 </style>
 <script>
+  const I18N = {
+    connecting:     {{ t('js_connecting')|tojson }},
+    connected:      {{ t('js_connected')|tojson }},
+    connect_fail:   {{ t('js_connect_fail')|tojson }},
+    unknown_error:  {{ t('js_unknown_error')|tojson }},
+    scanning_short: {{ t('js_scanning_short')|tojson }},
+    no_networks:    {{ t('wifi_no_networks')|tojson }},
+  };
+
   let selectedSsid = "";
   let selectedHasPwd = false;
 
@@ -115,7 +123,7 @@
   async function connect() {
     const btn = document.getElementById("connect-btn");
     btn.disabled = true;
-    btn.textContent = "Connexion en cours…";
+    btn.textContent = I18N.connecting;
     clearAlert();
 
     const resp = await fetch("/wifi/connect", {
@@ -126,12 +134,12 @@
     const data = await resp.json();
 
     if (data.success) {
-      showAlert("Connecté à " + selectedSsid + " ! Redirection…", "success");
+      showAlert(I18N.connected.replace("{ssid}", selectedSsid), "success");
       setTimeout(() => window.location.href = "/configure", 1500);
     } else {
-      showAlert("Échec : " + (data.error || "erreur inconnue"), "error");
+      showAlert(I18N.connect_fail.replace("{e}", data.error || I18N.unknown_error), "error");
       btn.disabled = false;
-      btn.textContent = "Se connecter";
+      btn.textContent = I18N.connecting.split("\u2026")[0];
     }
   }
 

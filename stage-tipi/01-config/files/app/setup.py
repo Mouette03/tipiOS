@@ -19,6 +19,12 @@ import re
 import subprocess
 import sys
 
+from translations import get_t
+
+# ---------------------------------------------------------------------------
+# Traductions — initialisées dans main() après lecture de la config
+# ---------------------------------------------------------------------------
+T: dict = {}
 
 # ---------------------------------------------------------------------------
 # Helpers de log
@@ -62,7 +68,7 @@ def validate_ip(ip: str) -> bool:
 # ---------------------------------------------------------------------------
 
 def configure_hostname(hostname: str):
-    step("Configuration du hostname...")
+    step(T["hostname_step"])
     subprocess.run(["hostnamectl", "set-hostname", hostname], check=True)
 
     with open("/etc/hosts", "r") as f:
@@ -74,36 +80,34 @@ def configure_hostname(hostname: str):
     with open("/etc/hosts", "w") as f:
         f.write(hosts)
 
-    done(f"Hostname : {hostname}")
+    done(T["hostname_done"].format(hostname=hostname))
 
 
 def configure_timezone(timezone: str):
-    step(f"Fuseau horaire → {timezone}")
+    step(T["timezone_step"].format(timezone=timezone))
     subprocess.run(["timedatectl", "set-timezone", timezone], check=True)
-    done(f"Fuseau horaire configuré : {timezone}")
+    done(T["timezone_done"].format(timezone=timezone))
 
 
 def configure_locale(locale: str):
-    step(f"Locale → {locale}")
+    step(T["locale_step"].format(locale=locale))
     try:
         locale_gen_path = "/etc/locale.gen"
         with open(locale_gen_path, "r") as f:
             content = f.read()
-        # Décommenter la ligne correspondante
         content = content.replace(f"# {locale} ", f"{locale} ")
         with open(locale_gen_path, "w") as f:
             f.write(content)
         run_cmd(["locale-gen"])
         run_cmd(["update-locale", f"LANG={locale}"])
-        done(f"Locale : {locale}")
+        done(T["locale_done"].format(locale=locale))
     except Exception as e:
-        err(f"Locale (non bloquant) : {e}")
+        err(T["locale_err"].format(e=e))
 
 
 def create_user(username: str, password: str):
-    step(f"Création de l'utilisateur '{username}'...")
+    step(T["user_step"].format(username=username))
 
-    # Créer l'utilisateur s'il n'existe pas
     result = subprocess.run(["id", username], capture_output=True)
     if result.returncode != 0:
         subprocess.run(
@@ -111,7 +115,6 @@ def create_user(username: str, password: str):
             check=True,
         )
 
-    # Définir le mot de passe via chpasswd (pas d'expansion shell, sécurisé)
     proc = subprocess.Popen(
         ["chpasswd"],
         stdin=subprocess.PIPE,
@@ -122,13 +125,13 @@ def create_user(username: str, password: str):
     if proc.returncode != 0:
         raise RuntimeError(f"chpasswd a échoué : {stderr.decode()}")
 
-    done(f"Utilisateur '{username}' créé")
+    done(T["user_done"].format(username=username))
 
 
 def add_ssh_key(username: str, ssh_key: str):
     if not ssh_key:
         return
-    step("Ajout de la clé SSH publique...")
+    step(T["sshkey_step"])
     try:
         pw = pwd.getpwnam(username)
         ssh_dir = f"/home/{username}/.ssh"
@@ -140,24 +143,22 @@ def add_ssh_key(username: str, ssh_key: str):
         os.chmod(auth_keys, 0o600)
         os.chown(ssh_dir, pw.pw_uid, pw.pw_gid)
         os.chown(auth_keys, pw.pw_uid, pw.pw_gid)
-        done("Clé SSH publique ajoutée")
+        done(T["sshkey_done"])
     except Exception as e:
-        err(f"Clé SSH (non bloquant) : {e}")
+        err(T["sshkey_err"].format(e=e))
 
 
 def configure_ssh(ssh_port: str, disable_password_auth: bool, ssh_key: str):
-    step(f"Configuration SSH (port {ssh_port})...")
+    step(T["ssh_step"].format(ssh_port=ssh_port))
     try:
         with open("/etc/ssh/sshd_config", "r") as f:
             sshd = f.read()
 
-        # Port
         if re.search(r"^#?Port\s+\d+", sshd, re.MULTILINE):
             sshd = re.sub(r"^#?Port\s+\d+", f"Port {ssh_port}", sshd, flags=re.MULTILINE)
         else:
             sshd = f"Port {ssh_port}\n" + sshd
 
-        # Désactiver auth par mdp si clé SSH fournie
         if disable_password_auth and ssh_key:
             sshd = re.sub(
                 r"^#?PasswordAuthentication\s+\w+",
@@ -166,36 +167,33 @@ def configure_ssh(ssh_port: str, disable_password_auth: bool, ssh_key: str):
                 flags=re.MULTILINE,
             )
 
-        # Activer SSH (sécurité) — matcher aussi "prohibit-password" (avec tiret)
         sshd = re.sub(r"^#?PermitRootLogin\s+[\w-]+", "PermitRootLogin no", sshd, flags=re.MULTILINE)
 
         with open("/etc/ssh/sshd_config", "w") as f:
             f.write(sshd)
 
-        # Générer les clés hôtes si absentes (installé en chroot, jamais générées au boot)
         subprocess.run(["ssh-keygen", "-A"], check=False)
 
-        # Vérifier la syntaxe de sshd_config avant de redémarrer
         test = subprocess.run(["sshd", "-t"], capture_output=True, text=True)
         if test.returncode != 0:
-            err(f"sshd_config invalide : {test.stderr.strip()} — SSH non redémarré")
+            err(T["ssh_invalid"].format(stderr=test.stderr.strip()))
             return
 
         subprocess.run(["systemctl", "enable", "ssh"], check=True)
         subprocess.run(["systemctl", "restart", "ssh"], check=True)
-        done(f"SSH configuré sur le port {ssh_port}")
+        done(T["ssh_done"].format(ssh_port=ssh_port))
     except Exception as e:
-        err(f"Configuration SSH : {e}")
+        err(T["ssh_err"].format(e=e))
 
 
 def configure_static_ip(static_ip: str, static_gw: str, static_dns: str):
     if not static_ip or not static_gw:
         return
     if not validate_ip(static_ip) or not validate_ip(static_gw):
-        err("IP statique invalide — ignorée")
+        err(T["staticip_invalid"])
         return
 
-    step(f"Configuration de l'IP statique ({static_ip})...")
+    step(T["staticip_step"].format(static_ip=static_ip))
     try:
         result = subprocess.run(
             ["nmcli", "-t", "-f", "NAME,DEVICE", "con", "show", "--active"],
@@ -209,7 +207,7 @@ def configure_static_ip(static_ip: str, static_gw: str, static_dns: str):
                 break
 
         if not eth_con:
-            err("Connexion Ethernet active introuvable — IP statique ignorée")
+            err(T["staticip_nociface"])
             return
 
         ip_cidr = static_ip if "/" in static_ip else f"{static_ip}/24"
@@ -218,24 +216,24 @@ def configure_static_ip(static_ip: str, static_gw: str, static_dns: str):
         subprocess.run(["nmcli", "con", "mod", eth_con, "ipv4.dns", static_dns], check=True)
         subprocess.run(["nmcli", "con", "mod", eth_con, "ipv4.method", "manual"], check=True)
         subprocess.run(["nmcli", "con", "up", eth_con], check=True)
-        done(f"IP statique appliquée : {static_ip}")
+        done(T["staticip_done"].format(static_ip=static_ip))
     except Exception as e:
-        err(f"IP statique : {e}")
+        err(T["staticip_err"].format(e=e))
 
 
 def system_update():
-    step("Mise à jour du système (apt update)...")
+    step(T["update_step"])
     env = {**os.environ, "DEBIAN_FRONTEND": "noninteractive"}
     run_cmd(["apt-get", "update", "-y"], env=env, check=False)
-    done("Index des paquets mis à jour")
+    done(T["update_done"])
 
-    step("Installation des mises à jour disponibles...")
+    step(T["upgrade_step"])
     run_cmd([
         "apt-get", "upgrade", "-y",
         "-o", "Dpkg::Options::=--force-confdef",
         "-o", "Dpkg::Options::=--force-confold",
     ], env=env, check=False)
-    done("Système à jour")
+    done(T["upgrade_done"])
 
 
 def connect_wifi(wifi_ssid: str, wifi_password: str):
@@ -243,23 +241,19 @@ def connect_wifi(wifi_ssid: str, wifi_password: str):
     if not wifi_ssid:
         return
     import time
-    step(f"Connexion WiFi → '{wifi_ssid}'...")
+    step(T["wifi_step"].format(wifi_ssid=wifi_ssid))
     try:
-        # Arrêter hostapd et dnsmasq avant de rendre wlan0 à NM
         subprocess.run(["pkill", "-f", "tipi-hostapd.conf"], capture_output=True)
         subprocess.run(["pkill", "-f", "tipi-dnsmasq"], capture_output=True)
         subprocess.run(["pkill", "hostapd"], capture_output=True)
         time.sleep(1)
-        # Remettre wlan0 sous gestion NetworkManager
         subprocess.run(["nmcli", "dev", "set", "wlan0", "managed", "yes"],
                        capture_output=True)
         time.sleep(2)
 
-        # Supprimer tout profil existant pour éviter les conflits de key-mgmt
         subprocess.run(["nmcli", "con", "delete", "tipi-wifi"],
                        capture_output=True)
 
-        # Créer un profil propre avec les paramètres de sécurité explicites
         if wifi_password:
             add_cmd = [
                 "nmcli", "con", "add",
@@ -271,7 +265,6 @@ def connect_wifi(wifi_ssid: str, wifi_password: str):
                 "wifi-sec.psk", wifi_password,
             ]
         else:
-            # Réseau ouvert — pas de section sécurité
             add_cmd = [
                 "nmcli", "con", "add",
                 "type", "wifi",
@@ -282,7 +275,7 @@ def connect_wifi(wifi_ssid: str, wifi_password: str):
 
         result = subprocess.run(add_cmd, capture_output=True, text=True)
         if result.returncode != 0:
-            err(f"WiFi — création profil : {(result.stderr or result.stdout).strip()}")
+            err(T["wifi_profile_err"].format(e=(result.stderr or result.stdout).strip()))
             return
 
         result = subprocess.run(
@@ -290,19 +283,18 @@ def connect_wifi(wifi_ssid: str, wifi_password: str):
             capture_output=True, text=True, timeout=40,
         )
         if result.returncode == 0:
-            done(f"WiFi connecté : {wifi_ssid}")
+            done(T["wifi_done"].format(wifi_ssid=wifi_ssid))
         else:
-            err(f"WiFi — connexion échouée : {(result.stderr or result.stdout).strip()}")
+            err(T["wifi_fail"].format(e=(result.stderr or result.stdout).strip()))
     except subprocess.TimeoutExpired:
-        err("WiFi — délai dépassé (40 s)")
+        err(T["wifi_timeout"])
     except Exception as e:
-        err(f"WiFi : {e}")
+        err(T["wifi_err"].format(e=e))
 
 
 def install_runtipi():
-    step("Installation de runTipi (Docker inclus — patience)...")
+    step(T["runtipi_step"])
     try:
-        # Commande officielle : curl -L https://setup.runtipi.io | bash
         curl = subprocess.Popen(
             ["curl", "-L", "--max-time", "120", "https://setup.runtipi.io"],
             stdout=subprocess.PIPE,
@@ -316,7 +308,7 @@ def install_runtipi():
             text=True,
             bufsize=1,
         )
-        curl.stdout.close()  # permet à curl de recevoir SIGPIPE si bash se termine
+        curl.stdout.close()
 
         for line in iter(bash.stdout.readline, ""):
             line = line.rstrip()
@@ -327,12 +319,11 @@ def install_runtipi():
         curl.wait()
 
         if bash.returncode != 0:
-            err(f"runTipi : installation échouée (code {bash.returncode})")
+            err(T["runtipi_fail"].format(code=bash.returncode))
         else:
-            done("runTipi installé et démarré avec succès !")
-            # Docker mémorise les containers avec restart:unless-stopped → autostart au reboot
+            done(T["runtipi_done"])
     except Exception as e:
-        err(f"Installation runTipi : {e}")
+        err(T["runtipi_err"].format(e=e))
 
 
 def get_final_ip() -> str | None:
@@ -355,6 +346,7 @@ def get_final_ip() -> str | None:
 # ---------------------------------------------------------------------------
 
 def main():
+    global T
     if len(sys.argv) != 2:
         print("Usage: setup.py <config.json>", file=sys.stderr)
         sys.exit(1)
@@ -364,14 +356,17 @@ def main():
         with open(config_path) as f:
             cfg = json.load(f)
     except Exception as e:
-        err(f"Lecture de la configuration impossible : {e}")
+        # T pas encore initialisé ici, message en anglais par défaut
+        print(f"TIPI_ERROR:Cannot read configuration: {e}", flush=True)
         sys.exit(1)
     finally:
-        # Supprimer le fichier de config dès qu'il est lu (contient le mdp)
         try:
             os.remove(config_path)
         except Exception:
             pass
+
+    # Initialiser les traductions dès que la langue est connue
+    T = get_t(cfg.get("lang", "en"))
 
     hostname             = cfg.get("hostname", "tipios")
     username             = cfg.get("username", "")
@@ -389,7 +384,7 @@ def main():
 
     # Validation minimale
     if not username or not password:
-        err("Nom d'utilisateur ou mot de passe manquant")
+        err(T["config_missing"])
         sys.exit(1)
 
     # --- Pipeline d'installation ---
@@ -401,17 +396,15 @@ def main():
     configure_ssh(ssh_port, disable_password_auth, ssh_key)
     configure_static_ip(static_ip, static_gw, static_dns)
     system_update()
-    # WiFi EN DERNIER : coupe le hotspot, l'utilisateur voit la page progress jusqu'au bout
     if wifi_ssid:
-        step(f"⚠️ Le hotspot va s'arrêter — reconnectez-vous à votre WiFi puis ouvrez http://{hostname}.local")
+        step(T["wifi_hotspot_warn"].format(hostname=hostname))
     connect_wifi(wifi_ssid, wifi_password)
     install_runtipi()
 
-    # --- Affichage de l'IP finale ---
     final_ip = get_final_ip()
     if final_ip:
         print(f"TIPI_IP:{final_ip}", flush=True)
-    done("Configuration terminée !")
+    done(T["config_done"])
 
 
 if __name__ == "__main__":

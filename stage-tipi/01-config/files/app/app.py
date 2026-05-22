@@ -13,7 +13,9 @@ import signal
 import subprocess
 import threading
 import time
-from flask import Flask, Response, jsonify, redirect, render_template, request
+from urllib.parse import quote
+from flask import Flask, Response, jsonify, redirect, render_template, request, session
+from translations import get_t, DEFAULT_LANG, SUPPORTED_LANGS, LANG_LABELS
 
 # ---------------------------------------------------------------------------
 # Init Flask
@@ -142,6 +144,26 @@ def handle_captive_portal():
     if request.path in CAPTIVE_PORTAL_PATHS:
         return redirect("http://10.42.0.1/", 302)
 
+
+@app.context_processor
+def inject_i18n():
+    lang = session.get("lang", DEFAULT_LANG)
+    T    = get_t(lang)
+    def t(key, **kw):
+        val = T.get(key, key)
+        return val.format(**kw) if kw else val
+    return {"t": t, "lang": lang, "lang_labels": LANG_LABELS, "supported_langs": SUPPORTED_LANGS}
+
+
+@app.route("/lang")
+def set_lang():
+    lang = request.args.get("code", DEFAULT_LANG)
+    if lang not in SUPPORTED_LANGS:
+        lang = DEFAULT_LANG
+    session["lang"] = lang
+    referrer = request.referrer
+    return redirect(referrer if referrer else "/configure")
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -205,6 +227,8 @@ def apply_config():
     global _config
 
     # Validation et nettoyage
+    T = get_t(session.get("lang", DEFAULT_LANG))
+
     hostname = re.sub(r"[^a-zA-Z0-9\-]", "", request.form.get("hostname", "tipios"))[:63] or "tipios"
     username = re.sub(r"[^a-zA-Z0-9_\-]", "", request.form.get("username", ""))[:32]
     password = request.form.get("password", "")
@@ -212,11 +236,11 @@ def apply_config():
     ssh_port_raw = request.form.get("ssh_port", "22").strip()
 
     if not username:
-        return redirect("/configure?error=Nom+d%27utilisateur+requis")
+        return redirect(f"/configure?error={quote(T['err_username_required'])}")
     if not password or len(password) < 8:
-        return redirect("/configure?error=Mot+de+passe+SSH+%3A+8+caract%C3%A8res+minimum")
+        return redirect(f"/configure?error={quote(T['err_password_short'])}")
     if password != confirm:
-        return redirect("/configure?error=Les+mots+de+passe+ne+correspondent+pas")
+        return redirect(f"/configure?error={quote(T['err_password_mismatch'])}")
 
     try:
         ssh_port = str(max(1, min(65535, int(ssh_port_raw))))
@@ -253,6 +277,7 @@ def apply_config():
         "static_dns":            static_dns,
         "wifi_ssid":             wifi_ssid,
         "wifi_password":         wifi_password,
+        "lang":                  session.get("lang", DEFAULT_LANG),
     }
 
     # Lancer le thread dès maintenant (ne pas attendre que le SSE se connecte)
@@ -301,6 +326,7 @@ def _run_setup():
 
 
 def _run_setup_inner(step, done, err, out):
+    T = get_t(_config.get("lang", DEFAULT_LANG))
 
     # Écriture de la config dans un fichier temporaire (évite les env vars avec mdp)
     config_path = "/tmp/tipi-config.json"
@@ -309,10 +335,10 @@ def _run_setup_inner(step, done, err, out):
             json.dump(_config, f)
         os.chmod(config_path, 0o600)
     except Exception as e:
-        err(f"Impossible d'écrire la configuration : {e}")
+        err(T["setup_write_error"].format(e=e))
         return
 
-    step("Démarrage de la configuration système...")
+    step(T["setup_starting"])
 
     try:
         process = subprocess.Popen(
@@ -323,7 +349,7 @@ def _run_setup_inner(step, done, err, out):
             bufsize=1,
         )
     except Exception as e:
-        err(f"Impossible de lancer setup.py : {e}")
+        err(T["setup_launch_error"].format(e=e))
         return
 
     final_ip = None
@@ -360,13 +386,13 @@ def _run_setup_inner(step, done, err, out):
     if process.returncode == 0:
         _progress_log.append({
             "level":    "final",
-            "msg":      "Installation terminée ! Redémarrez le Pi pour lancer runTipi.",
+            "msg":      T["setup_complete"],
             "ip":       final_ip,
             "hostname": hostname,
             "ssh_port": ssh_port,
         })
     else:
-        err("Une erreur est survenue. Consultez les logs ci-dessus.")
+        err(T["setup_error"])
 
 
 @app.route("/progress/log")

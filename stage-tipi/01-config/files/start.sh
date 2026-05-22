@@ -93,11 +93,13 @@ elif [ "$WLAN_OK" = "1" ]; then
 fi
 
 # ------------------------------------------------------------------ #
-#  4. Redirection iptables 80 → 8080 (portail captif + accès direct)  #
+#  4. Redirection nftables 80 → 8080 (portail captif + accès direct)  #
 # ------------------------------------------------------------------ #
-iptables -t nat -A PREROUTING -i wlan0 -p tcp --dport 80 -j REDIRECT --to-port 8080 2>/dev/null || true
-iptables -t nat -A PREROUTING -i eth0  -p tcp --dport 80 -j REDIRECT --to-port 8080 2>/dev/null || true
-log "iptables: redirection port 80 → 8080 activée"
+nft add table ip tipi_nat 2>/dev/null || true
+nft add chain ip tipi_nat prerouting '{ type nat hook prerouting priority -100; }' 2>/dev/null || true
+nft add rule ip tipi_nat prerouting iif wlan0 tcp dport 80 redirect to :8080 2>/dev/null || true
+nft add rule ip tipi_nat prerouting iif eth0  tcp dport 80 redirect to :8080 2>/dev/null || true
+log "nftables: redirection port 80 → 8080 activée"
 
 # ------------------------------------------------------------------ #
 #  5. Lancement du portail web Flask (port 8080)                      #
