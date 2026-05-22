@@ -243,9 +243,12 @@ def apply_config():
         return redirect(f"/configure?error={quote(T['err_password_mismatch'])}")
 
     try:
-        ssh_port = str(max(1, min(65535, int(ssh_port_raw))))
+        ssh_port_int = int(ssh_port_raw)
+        if not (1 <= ssh_port_int <= 65535):
+            raise ValueError
+        ssh_port = str(ssh_port_int)
     except ValueError:
-        ssh_port = "22"
+        return redirect(f"/configure?error={quote(T['err_ssh_port_invalid'])}")
 
     ssh_key = request.form.get("ssh_key", "").strip()
     disable_pass = request.form.get("disable_password_auth") == "on"

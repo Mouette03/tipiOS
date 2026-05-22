@@ -73,6 +73,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "err_username_required": "Username required",
         "err_password_short":    "SSH password: 8 characters minimum",
         "err_password_mismatch": "Passwords do not match",
+        "err_ssh_port_invalid":  "SSH port must be a number between 1 and 65535",
 
         # progress.html
         "page_progress_title":  "Installation in progress",
@@ -206,6 +207,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "err_username_required": "Nom d'utilisateur requis",
         "err_password_short":    "Mot de passe SSH : 8 caractères minimum",
         "err_password_mismatch": "Les mots de passe ne correspondent pas",
+        "err_ssh_port_invalid":  "Le port SSH doit être un nombre entre 1 et 65535",
 
         "page_progress_title":  "Installation en cours",
         "progress_h2":          "Installation en cours",
@@ -335,6 +337,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "err_username_required": "Benutzername erforderlich",
         "err_password_short":    "SSH-Passwort: mindestens 8 Zeichen",
         "err_password_mismatch": "Passwörter stimmen nicht überein",
+        "err_ssh_port_invalid":  "SSH-Port muss eine Zahl zwischen 1 und 65535 sein",
 
         "page_progress_title":  "Installation läuft",
         "progress_h2":          "Installation läuft",
@@ -464,6 +467,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "err_username_required": "Nombre de usuario requerido",
         "err_password_short":    "Contraseña SSH: mínimo 8 caracteres",
         "err_password_mismatch": "Las contraseñas no coinciden",
+        "err_ssh_port_invalid":  "El puerto SSH debe ser un número entre 1 y 65535",
 
         "page_progress_title":  "Instalación en curso",
         "progress_h2":          "Instalación en curso",
