@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 TipiOS — Portail de configuration (premier démarrage)
-Tourne sur le port 80, accessible via :
+Tourne sur le port 8080, accessible via :
   - http://tipisetup.local   (mDNS Avahi, réseau local)
   - http://10.42.0.1         (hotspot WiFi TipiSetup)
 """
@@ -397,7 +397,7 @@ def reboot():
 if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
-        port=80,
+        port=8080,
         debug=False,
         threaded=True,
         use_reloader=False,

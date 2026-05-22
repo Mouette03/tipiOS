@@ -93,9 +93,16 @@ elif [ "$WLAN_OK" = "1" ]; then
 fi
 
 # ------------------------------------------------------------------ #
-#  4. Lancement du portail web Flask (port 80)                        #
+#  4. Redirection iptables 80 → 8080 (portail captif + accès direct)  #
 # ------------------------------------------------------------------ #
-log "Démarrage du portail de configuration (port 80)..."
+iptables -t nat -A PREROUTING -i wlan0 -p tcp --dport 80 -j REDIRECT --to-port 8080 2>/dev/null || true
+iptables -t nat -A PREROUTING -i eth0  -p tcp --dport 80 -j REDIRECT --to-port 8080 2>/dev/null || true
+log "iptables: redirection port 80 → 8080 activée"
+
+# ------------------------------------------------------------------ #
+#  5. Lancement du portail web Flask (port 8080)                      #
+# ------------------------------------------------------------------ #
+log "Démarrage du portail de configuration (port 8080)..."
 python3 /opt/tipi-setup/app.py
 EXIT_CODE=$?
 log "Flask terminé avec code $EXIT_CODE"

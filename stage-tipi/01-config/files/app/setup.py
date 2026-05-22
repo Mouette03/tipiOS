@@ -327,37 +327,10 @@ def install_runtipi():
         curl.wait()
 
         if bash.returncode != 0:
-            # Le script peut échouer à démarrer runTipi si le port 80 est pris par Flask.
-            err(f"runTipi : le démarrage initial a échoué (code {bash.returncode}) — création du service systemd pour le reboot...")
+            err(f"runTipi : installation échouée (code {bash.returncode})")
         else:
-            done("runTipi installé avec succès !")
-
-        # Le script d'install ne crée pas le service systemd s'il échoue à démarrer.
-        # On le crée nous-mêmes si absent.
-        service_path = "/etc/systemd/system/runtipi.service"
-        if not os.path.exists(service_path):
-            out("Création du service systemd runtipi...")
-            runtipi_service = (
-                "[Unit]\n"
-                "Description=RunTipi\n"
-                "After=docker.service network-online.target\n"
-                "Requires=docker.service\n"
-                "Wants=network-online.target\n\n"
-                "[Service]\n"
-                "Type=oneshot\n"
-                "RemainAfterExit=yes\n"
-                "ExecStart=/runtipi/runtipi-cli start\n"
-                "ExecStop=/runtipi/runtipi-cli stop\n"
-                "WorkingDirectory=/runtipi\n\n"
-                "[Install]\n"
-                "WantedBy=multi-user.target\n"
-            )
-            with open(service_path, "w") as f:
-                f.write(runtipi_service)
-            subprocess.run(["systemctl", "daemon-reload"], check=False, capture_output=True)
-
-        subprocess.run(["systemctl", "enable", "runtipi.service"], check=False, capture_output=True)
-        done("Service runtipi activé pour le démarrage automatique.")
+            done("runTipi installé et démarré avec succès !")
+            # Docker mémorise les containers avec restart:unless-stopped → autostart au reboot
     except Exception as e:
         err(f"Installation runTipi : {e}")
 
