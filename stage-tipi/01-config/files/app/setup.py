@@ -128,6 +128,17 @@ def create_user(username: str, password: str):
     done(T["user_done"].format(username=username))
 
 
+def remove_build_user(keep_username: str):
+    """Remove the temporary pi-gen build user (default: 'tipi/tipipassword').
+    Skipped if the user chose the same username to avoid self-deletion."""
+    build_user = "tipi"
+    if build_user == keep_username:
+        return
+    result = subprocess.run(["id", build_user], capture_output=True)
+    if result.returncode == 0:
+        subprocess.run(["userdel", "-r", build_user], check=False, capture_output=True)
+
+
 def add_ssh_key(username: str, ssh_key: str):
     if not ssh_key:
         return
@@ -392,6 +403,7 @@ def main():
     configure_timezone(timezone)
     configure_locale(locale)
     create_user(username, password)
+    remove_build_user(username)
     add_ssh_key(username, ssh_key)
     configure_ssh(ssh_port, disable_password_auth, ssh_key)
     configure_static_ip(static_ip, static_gw, static_dns)
