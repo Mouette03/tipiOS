@@ -64,7 +64,7 @@ jobs:
             echo 'DEPLOY_COMPRESSION="xz"'
             echo 'TARGET_HOSTNAME="tipisetup"'
             echo 'FIRST_USER_NAME="tipi"'
-            echo 'FIRST_USER_PASS="changeme"'
+            echo 'FIRST_USER_PASS="tipipassword"'
             echo 'ENABLE_SSH=1'
             echo 'LOCALE_DEFAULT="en_GB.UTF-8"'
             echo 'KEYBOARD_KEYMAP="us"'
