@@ -247,6 +247,17 @@ def system_update():
     done(T["upgrade_done"])
 
 
+def _write_wifi_error(ssid: str, msg: str):
+    """Write WiFi error to /boot/firmware so it's readable from any OS."""
+    try:
+        with open("/boot/firmware/tipi-wifi-error.txt", "w") as f:
+            f.write(f"TipiOS — WiFi connection error\n")
+            f.write(f"SSID : {ssid}\n")
+            f.write(f"Error: {msg}\n")
+    except Exception:
+        pass
+
+
 def connect_wifi(wifi_ssid: str, wifi_password: str):
     """Connecte wlan0 au WiFi choisi — appelé EN DERNIER (coupe le hotspot)."""
     if not wifi_ssid:
@@ -286,7 +297,9 @@ def connect_wifi(wifi_ssid: str, wifi_password: str):
 
         result = subprocess.run(add_cmd, capture_output=True, text=True)
         if result.returncode != 0:
-            err(T["wifi_profile_err"].format(e=(result.stderr or result.stdout).strip()))
+            msg = T["wifi_profile_err"].format(e=(result.stderr or result.stdout).strip())
+            err(msg)
+            _write_wifi_error(wifi_ssid, msg)
             return
 
         result = subprocess.run(
@@ -296,11 +309,17 @@ def connect_wifi(wifi_ssid: str, wifi_password: str):
         if result.returncode == 0:
             done(T["wifi_done"].format(wifi_ssid=wifi_ssid))
         else:
-            err(T["wifi_fail"].format(e=(result.stderr or result.stdout).strip()))
+            msg = T["wifi_fail"].format(e=(result.stderr or result.stdout).strip())
+            err(msg)
+            _write_wifi_error(wifi_ssid, msg)
     except subprocess.TimeoutExpired:
-        err(T["wifi_timeout"])
+        msg = T["wifi_timeout"]
+        err(msg)
+        _write_wifi_error(wifi_ssid, msg)
     except Exception as e:
-        err(T["wifi_err"].format(e=e))
+        msg = T["wifi_err"].format(e=e)
+        err(msg)
+        _write_wifi_error(wifi_ssid, msg)
 
 
 def install_runtipi():
