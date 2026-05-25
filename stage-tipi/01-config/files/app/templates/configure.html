@@ -124,8 +124,9 @@
 
   <div class="alert" id="wifi-warning" style="display:none;background:#fff8e1;color:#5a3e00;border-left:4px solid #f59e0b;padding:0.85rem 1rem;border-radius:var(--radius);margin-bottom:1rem;font-size:0.85rem;line-height:1.55">
     {{ t('warn_wifi_hotspot')|safe }}
-    <br><code id="mdns-link" style="font-size:1rem;font-weight:700;display:inline-block;margin-top:0.35rem;color:#7c4f00">http://<span id="mdns-hostname">tipisetup</span>.local</code>
+    <br><code style="font-size:1rem;font-weight:700;display:inline-block;margin-top:0.35rem;color:#7c4f00">http://tipisetup.local</code>
     <br><span style="color:#7c5e00;font-size:0.78rem">{{ t('warn_wifi_mdns') }}</span>
+    <br><span style="color:#7c5e00;font-size:0.82rem;margin-top:0.5rem;display:inline-block">{{ t('warn_wifi_after_reboot') }} <code style="font-size:0.9rem;font-weight:700;color:#7c4f00">http://<span id="mdns-hostname">tipios</span>.local</code></span>
   </div>
 
   <div class="field">
@@ -202,7 +203,7 @@
             results.style.display = "none";
             document.getElementById("wifi-warning").style.display = "";
             document.getElementById("mdns-hostname").textContent =
-              document.querySelector("input[name='hostname']").value.trim() || "tipisetup";
+              document.querySelector("input[name='hostname']").value.trim() || "tipios";
           });
           row.addEventListener("mouseover", () => row.style.background = "var(--border)");
           row.addEventListener("mouseout",  () => row.style.background = "");
@@ -231,7 +232,7 @@
     const mdnsSpan = document.getElementById("mdns-hostname");
     if (hostnameInput && mdnsSpan) {
       hostnameInput.addEventListener("input", () => {
-        mdnsSpan.textContent = hostnameInput.value.trim() || "tipisetup";
+        mdnsSpan.textContent = hostnameInput.value.trim() || "tipios";
       });
     }
 

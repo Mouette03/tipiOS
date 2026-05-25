@@ -21,6 +21,8 @@ install -v -m 644 files/app/static/favicon.ico            "${ROOTFS_DIR}/opt/tip
 
 # ---- Systemd service ----
 install -v -m 644 files/tipi-setup.service                "${ROOTFS_DIR}/etc/systemd/system/tipi-setup.service"
+install -v -m 644 files/tipi-runtipi-retry.service        "${ROOTFS_DIR}/etc/systemd/system/tipi-runtipi-retry.service"
+install -v -m 755 files/retry-runtipi.sh                  "${ROOTFS_DIR}/opt/tipi-setup/retry-runtipi.sh"
 
 # ---- hostapd : configuration du hotspot (country_code=US natif) ----
 # Ref : même approche que RaspAP — seule méthode fiable pour brcmfmac (RPi 4/5)
@@ -50,6 +52,7 @@ systemctl disable wpa_supplicant.service 2>/dev/null || true
 
 # ---- Activer le service tipi-setup ----
 systemctl enable tipi-setup.service
+systemctl enable tipi-runtipi-retry.service
 systemctl enable avahi-daemon.service
 # ---- Activer SSH (désactivé par défaut sur Trixie) ----
 systemctl enable ssh.service

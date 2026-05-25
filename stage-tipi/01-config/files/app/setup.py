@@ -18,6 +18,7 @@ import pwd
 import re
 import subprocess
 import sys
+import time
 
 from translations import get_t
 
@@ -322,38 +323,45 @@ def connect_wifi(wifi_ssid: str, wifi_password: str):
         _write_wifi_error(wifi_ssid, msg)
 
 
-def install_runtipi():
+def install_runtipi(max_attempts: int = 3) -> bool:
     step(T["runtipi_step"])
-    try:
-        curl = subprocess.Popen(
-            ["curl", "-L", "--max-time", "120", "https://setup.runtipi.io"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        bash = subprocess.Popen(
-            ["bash"],
-            stdin=curl.stdout,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
-        )
-        curl.stdout.close()
+    for attempt in range(1, max_attempts + 1):
+        if attempt > 1:
+            out(T["runtipi_retry"].format(attempt=attempt, total=max_attempts))
+            time.sleep(30)
+        try:
+            curl = subprocess.Popen(
+                ["curl", "-L", "--max-time", "120", "https://setup.runtipi.io"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            bash = subprocess.Popen(
+                ["bash"],
+                stdin=curl.stdout,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+            )
+            curl.stdout.close()
 
-        for line in iter(bash.stdout.readline, ""):
-            line = line.rstrip()
-            if line:
-                out(line)
+            for line in iter(bash.stdout.readline, ""):
+                line = line.rstrip()
+                if line:
+                    out(line)
 
-        bash.wait()
-        curl.wait()
+            bash.wait()
+            curl.wait()
 
-        if bash.returncode != 0:
-            err(T["runtipi_fail"].format(code=bash.returncode))
-        else:
-            done(T["runtipi_done"])
-    except Exception as e:
-        err(T["runtipi_err"].format(e=e))
+            if bash.returncode == 0:
+                done(T["runtipi_done"])
+                return True
+            else:
+                err(T["runtipi_fail"].format(code=bash.returncode))
+        except Exception as e:
+            err(T["runtipi_err"].format(e=e))
+
+    return False
 
 
 def get_final_ip() -> str | None:
@@ -430,7 +438,13 @@ def main():
     if wifi_ssid:
         step(T["wifi_hotspot_warn"].format(hostname=hostname))
     connect_wifi(wifi_ssid, wifi_password)
-    install_runtipi()
+    if not install_runtipi():
+        try:
+            with open("/boot/firmware/tipi-install-failed.flag", "w") as f:
+                f.write("1")
+        except Exception:
+            pass
+        err(T["runtipi_retry_boot"].format(hostname=hostname))
 
     final_ip = get_final_ip()
     if final_ip:

@@ -376,6 +376,17 @@ def _run_setup_inner(step, done, err, out):
     hostname = _config.get("hostname", "tipios")
     ssh_port = _config.get("ssh_port", "22")
 
+    # Restaurer la redirection nftables 80→8080 au cas où Docker l'aurait purgée
+    # pendant l'installation de runTipi (les règles en mémoire peuvent être effacées
+    # si le service nftables est redémarré par l'installeur Docker).
+    for iface in ("wlan0", "eth0"):
+        subprocess.run(["nft", "add", "table", "ip", "tipi_nat"], capture_output=True)
+        subprocess.run(["nft", "add", "chain", "ip", "tipi_nat", "prerouting",
+                        "{ type nat hook prerouting priority -100; }"], capture_output=True)
+        subprocess.run(["nft", "add", "rule", "ip", "tipi_nat", "prerouting",
+                        "iif", iface, "tcp", "dport", "80", "redirect", "to", ":8080"],
+                       capture_output=True)
+
     # Nettoyage : on désactive le service (ne se relancera plus au prochain boot)
     subprocess.run(["systemctl", "disable", "tipi-setup.service"], capture_output=True)
     # Arrêter hostapd/dnsmasq si toujours actifs (cas sans WiFi configuré)
