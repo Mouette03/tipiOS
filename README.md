@@ -255,3 +255,5 @@ Les templates et `setup.py` l'utilisent automatiquement — aucune autre modific
 ### Licence
 
 MIT
+
+
