@@ -433,10 +433,10 @@ def main():
     add_ssh_key(username, ssh_key)
     configure_ssh(ssh_port, disable_password_auth, ssh_key)
     configure_static_ip(static_ip, static_gw, static_dns)
-    system_update()
     if wifi_ssid:
         step(T["wifi_hotspot_warn"])
     connect_wifi(wifi_ssid, wifi_password)
+    system_update()
     if not install_runtipi():
         try:
             with open("/boot/firmware/tipi-install-failed.flag", "w") as f:

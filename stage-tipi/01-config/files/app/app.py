@@ -315,7 +315,7 @@ def _restore_nft_redirect():
     subprocess.run(["nft", "delete", "table", "ip", "tipi_nat"], capture_output=True)
     subprocess.run(["nft", "add", "table", "ip", "tipi_nat"], capture_output=True)
     subprocess.run(["nft", "add", "chain", "ip", "tipi_nat", "prerouting",
-                    "{ type nat hook prerouting priority -100; policy accept; }"],
+                    "{ type nat hook prerouting priority -150; policy accept; }"],
                    capture_output=True)
     for iface in ("wlan0", "eth0"):
         subprocess.run(["nft", "add", "rule", "ip", "tipi_nat", "prerouting",
