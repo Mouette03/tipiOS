@@ -93,16 +93,7 @@ elif [ "$WLAN_OK" = "1" ]; then
 fi
 
 # ------------------------------------------------------------------ #
-#  4. Redirection nftables 80 → 8080 (portail captif + accès direct)  #
-# ------------------------------------------------------------------ #
-nft add table ip tipi_nat 2>/dev/null || true
-nft add chain ip tipi_nat prerouting '{ type nat hook prerouting priority -150; }' 2>/dev/null || true
-nft add rule ip tipi_nat prerouting iif wlan0 tcp dport 80 redirect to :8080 2>/dev/null || true
-nft add rule ip tipi_nat prerouting iif eth0  tcp dport 80 redirect to :8080 2>/dev/null || true
-log "nftables: redirection port 80 → 8080 activée (watchdog Python actif)"
-
-# ------------------------------------------------------------------ #
-#  5. Lancement du portail web Flask (port 8080)                      #
+#  4. Lancement du portail web Flask (port 8080)                      #
 # ------------------------------------------------------------------ #
 log "Démarrage du portail de configuration (port 8080)..."
 python3 /opt/tipi-setup/app.py

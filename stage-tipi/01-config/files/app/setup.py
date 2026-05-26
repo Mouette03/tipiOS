@@ -434,7 +434,7 @@ def main():
     configure_ssh(ssh_port, disable_password_auth, ssh_key)
     configure_static_ip(static_ip, static_gw, static_dns)
     if wifi_ssid:
-        step(T["wifi_hotspot_warn"])
+        step("⚠️ " + T["wifi_hotspot_warn"])
     connect_wifi(wifi_ssid, wifi_password)
     system_update()
     if not install_runtipi():

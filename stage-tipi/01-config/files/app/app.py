@@ -2,8 +2,8 @@
 """
 RuntipiOS — Portail de configuration (premier démarrage)
 Tourne sur le port 8080, accessible via :
-  - http://tipisetup.local   (mDNS Avahi, réseau local)
-  - http://10.42.0.1         (hotspot WiFi TipiSetup)
+  - http://tipisetup.local:8080   (mDNS Avahi, réseau local)
+  - http://10.42.0.1:8080         (hotspot WiFi TipiSetup)
 """
 
 import json
@@ -310,30 +310,6 @@ def _append_log(msg: str, level: str = "log") -> dict:
     return entry
 
 
-def _restore_nft_redirect():
-    """Recrée la redirection nftables 80→8080 (idempotent, sans doublons)."""
-    subprocess.run(["nft", "delete", "table", "ip", "tipi_nat"], capture_output=True)
-    subprocess.run(["nft", "add", "table", "ip", "tipi_nat"], capture_output=True)
-    subprocess.run(["nft", "add", "chain", "ip", "tipi_nat", "prerouting",
-                    "{ type nat hook prerouting priority -150; policy accept; }"],
-                   capture_output=True)
-    for iface in ("wlan0", "eth0"):
-        subprocess.run(["nft", "add", "rule", "ip", "tipi_nat", "prerouting",
-                        "iif", iface, "tcp", "dport", "80", "redirect", "to", ":8080"],
-                       capture_output=True)
-
-
-def _nft_watchdog():
-    """Thread de surveillance — restaure la redirection nftables toutes les 0.5 s
-    pendant l'installation, pour contrer les resets éventuels de Docker/Runtipi."""
-    _restore_nft_redirect()  # Restauration immédiate au démarrage du watchdog
-    while not _setup_done:
-        time.sleep(0.5)
-        _restore_nft_redirect()
-    # Restauration finale une fois l'install terminée
-    _restore_nft_redirect()
-
-
 def _run_setup():
     """Thread de configuration système — lit _config, écrit dans _progress_log."""
     global _setup_done
@@ -342,9 +318,6 @@ def _run_setup():
     def done(msg):  _append_log(msg, "success")
     def err(msg):   _append_log(msg, "error")
     def out(msg):   _append_log(msg, "log")
-
-    # Lancer le watchdog nftables en parallèle
-    threading.Thread(target=_nft_watchdog, daemon=True).start()
 
     try:
         _run_setup_inner(step, done, err, out)
