@@ -23,6 +23,11 @@ import time
 from translations import get_t
 
 # ---------------------------------------------------------------------------
+# Nettoyage des codes ANSI (couleurs terminal) dans les sorties subprocess
+# ---------------------------------------------------------------------------
+_ANSI_RE = re.compile(r'\x1b\[[0-9;]*[mGKHFABCDJr]')
+
+# ---------------------------------------------------------------------------
 # Traductions — initialisées dans main() après lecture de la config
 # ---------------------------------------------------------------------------
 T: dict = {}
@@ -345,7 +350,7 @@ def install_runtipi(max_attempts: int = 3) -> bool:
             curl.stdout.close()
 
             for line in iter(bash.stdout.readline, ""):
-                line = line.rstrip()
+                line = _ANSI_RE.sub("", line).rstrip()
                 if line:
                     out(line)
 

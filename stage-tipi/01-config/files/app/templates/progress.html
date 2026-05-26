@@ -78,11 +78,13 @@
   let stepCount = 0;
   let nextIdx   = 0;
   let pollTimer = null;
+  let failCount = 0;
 
-  const logEl   = document.getElementById("log-container");
-  const barEl   = document.getElementById("progress-bar");
-  const spinner = document.getElementById("spinner");
-  let firstEntry = true;
+  const logEl      = document.getElementById("log-container");
+  const barEl      = document.getElementById("progress-bar");
+  const spinner    = document.getElementById("spinner");
+  const spinnerMsg = spinner.innerHTML;
+  let firstEntry   = true;
 
   function appendLog(msg, level) {
     if (firstEntry) { logEl.innerHTML = ""; firstEntry = false; }
@@ -123,8 +125,18 @@
 
   async function poll() {
     try {
-      const resp = await fetch(`/progress/log?from=${nextIdx}`);
-      if (!resp.ok) return;
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 4000);
+      const resp = await fetch(`/progress/log?from=${nextIdx}`, { signal: ctrl.signal });
+      clearTimeout(t);
+      if (!resp.ok) { onFail(); return; }
+
+      // Connexion rétablie après interruption
+      if (failCount > 0) {
+        failCount = 0;
+        spinner.innerHTML = spinnerMsg;
+      }
+
       const data = await resp.json();
 
       for (const entry of data.entries) {
@@ -143,7 +155,12 @@
         if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
         spinner.style.display = "none";
       }
-    } catch (_) { /* réseau temporairement indisponible, on réessaye */ }
+    } catch (_) { onFail(); }
+  }
+
+  function onFail() {
+    failCount++;
+    if (failCount === 5) spinner.innerHTML = '<span class="spin">⟳</span> Reconnexion…';
   }
 
   async function doReboot() {

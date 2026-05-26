@@ -18,15 +18,14 @@ Once configured, it automatically installs **Runtipi**, a self-hosted app store 
 - **Web configuration portal** — hostname, SSH user/password, timezone, locale, static IP, WiFi
 - **Multilingual** — English, French, German, Spanish (auto-detected, switchable at any time)
 - **Automatic Runtipi installation** — Docker included, starts on every reboot
-- **Resilient portal** — a Python watchdog keeps the web portal accessible even while Docker is installing and flushing firewall rules
-- **mDNS support** — access via `tipisetup.local` without typing an IP address
+- **mDNS support** — access via `tipisetup.local:8080` without typing an IP address
 - **Ethernet & WiFi** — works with both; WiFi hotspot as fallback
 
 ### First Boot Flow
 
 ```
 Flash image → Power on → Connect to "TipiSetup" WiFi (no password)
-  → Open http://tipisetup.local  (or http://10.42.0.1)
+  → Open http://tipisetup.local:8080  (or http://10.42.0.1:8080)
   → Fill in the form → Click "Apply and install Runtipi"
   → Watch the live log stream in your browser
   → Automatic reboot
@@ -64,8 +63,6 @@ cd RuntipiOS
 # The image is placed in deploy/
 ```
 
-> **Kernel note (Raspberry Pi 5):** The RPi 5 kernel (`6.x rpi-2712`) does not include the `ip_tables` module, so `iptables-legacy` is not available. RuntipiOS uses **nftables exclusively** for firewall and NAT rules. This is transparent to the user.
-
 ### Project Structure
 
 ```
@@ -73,7 +70,7 @@ stage-tipi/
 └── 01-config/
     └── files/
         ├── app/
-        │   ├── app.py              # Flask portal (port 8080) + nftables watchdog
+        │   ├── app.py              # Flask portal (port 8080)
         │   ├── setup.py            # System installation script (subprocess)
         │   ├── translations.py     # Shared i18n dictionary (EN/FR/DE/ES)
         │   ├── static/
@@ -83,7 +80,7 @@ stage-tipi/
         │       ├── progress.html
         │       └── wifi.html
         ├── retry-runtipi.sh        # Retries Runtipi install on next boot if first attempt failed
-        ├── start.sh                # Startup: hostapd, dnsmasq, nftables, Flask
+        ├── start.sh                # Startup: hostapd, dnsmasq, Flask
         ├── tipi-runtipi-retry.service  # systemd service for retry-runtipi.sh
         └── tipi-setup.service      # systemd service (first boot only)
 ```
@@ -94,16 +91,10 @@ stage-tipi/
 |-----------|------|
 | `hostapd` | Creates the `TipiSetup` WiFi hotspot (SSID, no password) |
 | `dnsmasq` | DHCP + DNS for clients connected to the hotspot |
-| `nftables` | NAT rule redirecting port 80 → 8080 at priority −150, so the portal is reachable without a port number |
-| Python watchdog | Background thread in `app.py` — re-applies the nftables rule every 2 s while Docker is installing (Docker resets firewall rules at startup) |
-| `Flask` | Serves the configuration portal on port 8080 |
+| `Flask` | Serves the configuration portal on port 8080 — access via `http://tipisetup.local:8080` or `http://10.42.0.1:8080` |
 | `setup.py` | Subprocess: configures hostname, SSH, locale, network, then runs `apt upgrade` and the Runtipi installer |
 | `avahi` | mDNS so `<hostname>.local` resolves on the LAN after reboot |
 | `retry-runtipi.sh` | Retries the Runtipi installer on the next boot if it failed; self-disables after one successful run |
-
-#### Why priority −150 for nftables?
-
-Docker registers its own NAT chain at nftables priority −100. If our rule were at the same priority and Docker flushed and rewrote the table, our rule could lose the tie. By using −150 (lower number = higher precedence), the portal redirect always wins, even after Docker rewrites the firewall.
 
 ### Adding a Language
 
@@ -119,10 +110,9 @@ Templates and `setup.py` pick it up automatically — no other changes needed.
 
 | Symptom | Likely cause | Fix |
 |---------|-------------|-----|
-| `http://tipisetup.local` unreachable | mDNS not working on your device | Use `http://10.42.0.1` instead |
-| Portal loads but installation log stops updating | Browser lost the SSE connection | Refresh the page — the log stream reconnects automatically |
+| `http://tipisetup.local:8080` unreachable | mDNS not working on your device | Use `http://10.42.0.1:8080` instead |
+| Portal loads but installation log stops updating | Browser lost the poll connection | Refresh the page — the log reconnects automatically |
 | Runtipi not running after reboot | First-boot installer failed | Connect to LAN, wait for the retry service, or SSH in and run `retry-runtipi.sh` manually |
-| `nft list ruleset` shows no `tipi_nat` table | Flask / watchdog not running | Check `journalctl -u tipi-setup` |
 | Can't SSH in | SSH port or key misconfigured | Re-flash and redo setup; check the SSH port you entered |
 
 ### License
@@ -145,15 +135,14 @@ Une fois configuré, il installe automatiquement **Runtipi**, un store d'applica
 - **Portail de configuration web** — hostname, utilisateur SSH, mot de passe, fuseau horaire, locale, IP statique, WiFi
 - **Multilingue** — anglais, français, allemand, espagnol (changeable à tout moment)
 - **Installation automatique de Runtipi** — Docker inclus, démarre à chaque reboot
-- **Portail résilient** — un watchdog Python maintient le portail web accessible même pendant que Docker s'installe et réinitialise les règles pare-feu
-- **Support mDNS** — accès via `tipisetup.local` sans saisir d'adresse IP
+- **Support mDNS** — accès via `tipisetup.local:8080` sans saisir d'adresse IP
 - **Ethernet & WiFi** — fonctionne avec les deux ; hotspot WiFi en solution de repli
 
 ### Déroulement au premier démarrage
 
 ```
 Flasher l'image → Démarrer → Se connecter au WiFi "TipiSetup" (sans mot de passe)
-  → Ouvrir http://tipisetup.local  (ou http://10.42.0.1)
+  → Ouvrir http://tipisetup.local:8080  (ou http://10.42.0.1:8080)
   → Remplir le formulaire → Cliquer "Appliquer et installer Runtipi"
   → Suivre les logs en direct dans le navigateur
   → Redémarrage automatique
@@ -191,8 +180,6 @@ cd RuntipiOS
 # L'image se trouve dans deploy/
 ```
 
-> **Note kernel (Raspberry Pi 5) :** Le kernel du RPi 5 (`6.x rpi-2712`) n'inclut pas le module `ip_tables`, donc `iptables-legacy` n'est pas disponible. RuntipiOS utilise **nftables exclusivement** pour les règles pare-feu et NAT. Cela est transparent pour l'utilisateur.
-
 ### Structure du projet
 
 ```
@@ -200,7 +187,7 @@ stage-tipi/
 └── 01-config/
     └── files/
         ├── app/
-        │   ├── app.py              # Portail Flask (port 8080) + watchdog nftables
+        │   ├── app.py              # Portail Flask (port 8080)
         │   ├── setup.py            # Script d'installation système (subprocess)
         │   ├── translations.py     # Dictionnaire i18n partagé (EN/FR/DE/ES)
         │   ├── static/
@@ -210,7 +197,7 @@ stage-tipi/
         │       ├── progress.html
         │       └── wifi.html
         ├── retry-runtipi.sh        # Relance l'install Runtipi au prochain boot si échec
-        ├── start.sh                # Démarrage : hostapd, dnsmasq, nftables, Flask
+        ├── start.sh                # Démarrage : hostapd, dnsmasq, Flask
         ├── tipi-runtipi-retry.service  # Service systemd pour retry-runtipi.sh
         └── tipi-setup.service      # Service systemd (premier démarrage uniquement)
 ```
@@ -221,16 +208,10 @@ stage-tipi/
 |-----------|------|
 | `hostapd` | Crée le hotspot WiFi `TipiSetup` (SSID, sans mot de passe) |
 | `dnsmasq` | DHCP + DNS pour les clients connectés au hotspot |
-| `nftables` | Règle NAT redirigeant le port 80 → 8080 à priorité −150, pour accéder au portail sans numéro de port |
-| Watchdog Python | Thread de fond dans `app.py` — réapplique la règle nftables toutes les 2 s pendant l'installation Docker (Docker réinitialise les règles au démarrage) |
-| `Flask` | Sert le portail de configuration sur le port 8080 |
+| `Flask` | Sert le portail de configuration sur le port 8080 — accès via `http://tipisetup.local:8080` ou `http://10.42.0.1:8080` |
 | `setup.py` | Subprocess : configure hostname, SSH, locale, réseau, puis lance `apt upgrade` et l'installateur Runtipi |
 | `avahi` | mDNS pour que `<hostname>.local` soit résolu sur le réseau local après redémarrage |
 | `retry-runtipi.sh` | Relance l'installateur Runtipi au prochain boot en cas d'échec ; se désactive après une réussite |
-
-#### Pourquoi la priorité −150 pour nftables ?
-
-Docker enregistre sa propre chaîne NAT à la priorité nftables −100. Si notre règle était à la même priorité et que Docker vidait et réécrivait la table, notre règle pourrait perdre la priorité. En utilisant −150 (nombre plus bas = précédence plus haute), la redirection du portail l'emporte toujours, même après que Docker réécrit le pare-feu.
 
 ### Ajouter une langue
 
@@ -246,10 +227,9 @@ Les templates et `setup.py` l'utilisent automatiquement — aucune autre modific
 
 | Symptôme | Cause probable | Solution |
 |----------|---------------|----------|
-| `http://tipisetup.local` inaccessible | mDNS ne fonctionne pas sur l'appareil | Utiliser `http://10.42.0.1` à la place |
+| `http://tipisetup.local:8080` inaccessible | mDNS ne fonctionne pas sur l'appareil | Utiliser `http://10.42.0.1:8080` à la place |
 | Le portail charge mais les logs s'arrêtent | Le navigateur a perdu la connexion SSE | Rafraîchir la page — le flux se reconnecte automatiquement |
 | Runtipi absent après le redémarrage | L'installateur a échoué au premier boot | Se connecter au réseau local, attendre le service de relance, ou se connecter en SSH et lancer `retry-runtipi.sh` manuellement |
-| `nft list ruleset` ne montre pas de table `tipi_nat` | Flask / watchdog non démarrés | Vérifier `journalctl -u tipi-setup` |
 | Impossible de se connecter en SSH | Port ou clé SSH mal configurés | Reflasher et recommencer la configuration ; vérifier le port SSH saisi |
 
 ### Licence

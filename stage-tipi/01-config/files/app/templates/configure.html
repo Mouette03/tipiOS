@@ -46,8 +46,12 @@
 
   <div class="field">
     <label>{{ t('label_confirm') }}</label>
-    <input type="password" name="confirm_password" id="pwd2" minlength="8"
-           placeholder="{{ t('placeholder_confirm') }}" required autocomplete="new-password">
+    <div style="position:relative">
+      <input type="password" name="confirm_password" id="pwd2" minlength="8"
+             placeholder="{{ t('placeholder_confirm') }}" required autocomplete="new-password">
+      <button type="button" onclick="toggle('pwd2')"
+        style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;line-height:0"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+    </div>
   </div>
 
   <div class="field">
