@@ -13,3 +13,4 @@ ca-certificates
 wpasupplicant
 iw
 wireless-regdb
+iptables
