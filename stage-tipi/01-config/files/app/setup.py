@@ -1,6 +1,6 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
-TipiOS — Script d'installation système
+RuntipiOS — Script d'installation système
 Lancé par app.py via subprocess. Toutes les sorties sont capturées et
 relayées en temps réel vers le portail web.
 
@@ -8,7 +8,7 @@ Protocole de sortie :
   TIPI_STEP:<message>   → étape en cours (badge coloré)
   TIPI_DONE:<message>   → étape réussie (badge vert)
   TIPI_ERROR:<message>  → erreur non fatale (badge rouge)
-  TIPI_IP:<adresse>     → IP finale de runTipi
+  TIPI_IP:<adresse>     → IP finale de Runtipi
   <autre>               → log brut (affiché en gris)
 """
 
@@ -252,7 +252,7 @@ def _write_wifi_error(ssid: str, msg: str):
     """Write WiFi error to /boot/firmware so it's readable from any OS."""
     try:
         with open("/boot/firmware/tipi-wifi-error.txt", "w") as f:
-            f.write(f"TipiOS — WiFi connection error\n")
+            f.write(f"RuntipiOS — WiFi connection error\n")
             f.write(f"SSID : {ssid}\n")
             f.write(f"Error: {msg}\n")
     except Exception:
@@ -405,7 +405,7 @@ def main():
     # Initialiser les traductions dès que la langue est connue
     T = get_t(cfg.get("lang", "en"))
 
-    hostname             = cfg.get("hostname", "tipios")
+    hostname             = cfg.get("hostname", "runtipios")
     username             = cfg.get("username", "")
     password             = cfg.get("password", "")
     ssh_port             = str(cfg.get("ssh_port", "22"))

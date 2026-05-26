@@ -1,5 +1,5 @@
 #!/bin/bash
-# TipiOS — Script de démarrage du portail de configuration
+# RuntipiOS — Script de démarrage du portail de configuration
 # Lancé par systemd au premier démarrage uniquement.
 # Utilise hostapd directement (country_code=US) + dnsmasq pour DHCP.
 # Ref : même approche que RaspAP — seule méthode fiable sur brcmfmac (RPi 4/5).

@@ -1,6 +1,6 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
-TipiOS — Portail de configuration (premier démarrage)
+RuntipiOS — Portail de configuration (premier démarrage)
 Tourne sur le port 8080, accessible via :
   - http://tipisetup.local   (mDNS Avahi, réseau local)
   - http://10.42.0.1         (hotspot WiFi TipiSetup)
@@ -228,7 +228,7 @@ def apply_config():
     # Validation et nettoyage
     T = get_t(session.get("lang", DEFAULT_LANG))
 
-    hostname = re.sub(r"[^a-zA-Z0-9\-]", "", request.form.get("hostname", "tipios"))[:63] or "tipios"
+    hostname = re.sub(r"[^a-zA-Z0-9\-]", "", request.form.get("hostname", "runtipios"))[:63] or "runtipios"
     username = re.sub(r"[^a-zA-Z0-9_\-]", "", request.form.get("username", ""))[:32]
     password = request.form.get("password", "")
     confirm  = request.form.get("confirm_password", "")
@@ -297,7 +297,7 @@ def apply_config():
 def progress_page():
     if not _config:
         return redirect("/")
-    return render_template("progress.html", hostname=_config.get("hostname", "tipios"))
+    return render_template("progress.html", hostname=_config.get("hostname", "runtipios"))
 
 
 # ---------------------------------------------------------------------------
@@ -325,7 +325,7 @@ def _restore_nft_redirect():
 
 def _nft_watchdog():
     """Thread de surveillance — restaure la redirection nftables toutes les 0.5 s
-    pendant l'installation, pour contrer les resets éventuels de Docker/runTipi."""
+    pendant l'installation, pour contrer les resets éventuels de Docker/Runtipi."""
     _restore_nft_redirect()  # Restauration immédiate au démarrage du watchdog
     while not _setup_done:
         time.sleep(0.5)
@@ -399,7 +399,7 @@ def _run_setup_inner(step, done, err, out):
 
     process.wait()
 
-    hostname = _config.get("hostname", "tipios")
+    hostname = _config.get("hostname", "runtipios")
     ssh_port = _config.get("ssh_port", "22")
 
     # Nettoyage : on désactive le service (ne se relancera plus au prochain boot)

@@ -1,23 +1,23 @@
-# TipiOS
+﻿# RuntipiOS
 
-> A custom Raspberry Pi OS image (Trixie Lite 64-bit) with a first-boot web configuration portal and automatic [runTipi](https://runtipi.io) installation — no keyboard, no monitor, no hassle.
+> A custom Raspberry Pi OS image (Trixie Lite 64-bit) with a first-boot web configuration portal and automatic [Runtipi](https://runtipi.io) installation — no keyboard, no monitor, no hassle.
 
 ---
 
 ## 🇬🇧 English
 
-### What is TipiOS?
+### What is RuntipiOS?
 
-TipiOS is a ready-to-flash Raspberry Pi OS image (Trixie Lite 64-bit) that guides you through initial setup via a local web portal on first boot — no keyboard, no monitor required.
+RuntipiOS is a ready-to-flash Raspberry Pi OS image (Trixie Lite 64-bit) that guides you through initial setup via a local web portal on first boot — no keyboard, no monitor required.
 
-Once configured, it automatically installs **runTipi**, a self-hosted app store for your Raspberry Pi (Plex, Nextcloud, Home Assistant, and 200+ more apps).
+Once configured, it automatically installs **Runtipi**, a self-hosted app store for your Raspberry Pi (Plex, Nextcloud, Home Assistant, and 200+ more apps).
 
 ### Features
 
 - **Zero-touch setup** — connect to the `TipiSetup` WiFi hotspot, open a browser, done
 - **Web configuration portal** — hostname, SSH user/password, timezone, locale, static IP, WiFi
 - **Multilingual** — English, French, German, Spanish (auto-detected, switchable at any time)
-- **Automatic runTipi installation** — Docker included, starts on every reboot
+- **Automatic Runtipi installation** — Docker included, starts on every reboot
 - **Resilient portal** — a Python watchdog keeps the web portal accessible even while Docker is installing and flushing firewall rules
 - **mDNS support** — access via `tipisetup.local` without typing an IP address
 - **Ethernet & WiFi** — works with both; WiFi hotspot as fallback
@@ -27,20 +27,20 @@ Once configured, it automatically installs **runTipi**, a self-hosted app store 
 ```
 Flash image → Power on → Connect to "TipiSetup" WiFi (no password)
   → Open http://tipisetup.local  (or http://10.42.0.1)
-  → Fill in the form → Click "Apply and install runTipi"
+  → Fill in the form → Click "Apply and install Runtipi"
   → Watch the live log stream in your browser
   → Automatic reboot
-  → Access runTipi at http://<your-hostname>.local
-    (e.g. http://tipios.local or http://192.168.1.50)
+  → Access Runtipi at http://<your-hostname>.local
+    (e.g. http://runtipios.local or http://192.168.1.50)
 ```
 
 **Installation order** (runs automatically after you click Apply):
 1. System configuration — hostname, timezone, locale, user, SSH
 2. Network — static IP and/or WiFi credentials
 3. `apt update && apt upgrade` — requires internet; runs after WiFi is connected
-4. runTipi — Docker + runTipi installer
+4. Runtipi — Docker + Runtipi installer
 
-> **Note:** If the runTipi installer fails during first boot (network hiccup, timeout), a systemd service (`tipi-runtipi-retry.service`) retries it automatically on the next reboot. The retry script (`retry-runtipi.sh`) runs once, then disables itself.
+> **Note:** If the Runtipi installer fails during first boot (network hiccup, timeout), a systemd service (`tipi-runtipi-retry.service`) retries it automatically on the next reboot. The retry script (`retry-runtipi.sh`) runs once, then disables itself.
 
 ### Requirements
 
@@ -54,8 +54,8 @@ The image is built with [pi-gen](https://github.com/RPi-Distro/pi-gen) (arm64 br
 
 ```bash
 # Clone this repo alongside a pi-gen checkout
-git clone https://github.com/<your-username>/tipiOS
-cd tipiOS
+git clone https://github.com/<your-username>/RuntipiOS
+cd RuntipiOS
 
 # Build (requires Docker)
 ./build.sh
@@ -64,7 +64,7 @@ cd tipiOS
 # The image is placed in deploy/
 ```
 
-> **Kernel note (Raspberry Pi 5):** The RPi 5 kernel (`6.x rpi-2712`) does not include the `ip_tables` module, so `iptables-legacy` is not available. TipiOS uses **nftables exclusively** for firewall and NAT rules. This is transparent to the user.
+> **Kernel note (Raspberry Pi 5):** The RPi 5 kernel (`6.x rpi-2712`) does not include the `ip_tables` module, so `iptables-legacy` is not available. RuntipiOS uses **nftables exclusively** for firewall and NAT rules. This is transparent to the user.
 
 ### Project Structure
 
@@ -82,7 +82,7 @@ stage-tipi/
         │       ├── configure.html
         │       ├── progress.html
         │       └── wifi.html
-        ├── retry-runtipi.sh        # Retries runTipi install on next boot if first attempt failed
+        ├── retry-runtipi.sh        # Retries Runtipi install on next boot if first attempt failed
         ├── start.sh                # Startup: hostapd, dnsmasq, nftables, Flask
         ├── tipi-runtipi-retry.service  # systemd service for retry-runtipi.sh
         └── tipi-setup.service      # systemd service (first boot only)
@@ -97,9 +97,9 @@ stage-tipi/
 | `nftables` | NAT rule redirecting port 80 → 8080 at priority −150, so the portal is reachable without a port number |
 | Python watchdog | Background thread in `app.py` — re-applies the nftables rule every 2 s while Docker is installing (Docker resets firewall rules at startup) |
 | `Flask` | Serves the configuration portal on port 8080 |
-| `setup.py` | Subprocess: configures hostname, SSH, locale, network, then runs `apt upgrade` and the runTipi installer |
+| `setup.py` | Subprocess: configures hostname, SSH, locale, network, then runs `apt upgrade` and the Runtipi installer |
 | `avahi` | mDNS so `<hostname>.local` resolves on the LAN after reboot |
-| `retry-runtipi.sh` | Retries the runTipi installer on the next boot if it failed; self-disables after one successful run |
+| `retry-runtipi.sh` | Retries the Runtipi installer on the next boot if it failed; self-disables after one successful run |
 
 #### Why priority −150 for nftables?
 
@@ -121,7 +121,7 @@ Templates and `setup.py` pick it up automatically — no other changes needed.
 |---------|-------------|-----|
 | `http://tipisetup.local` unreachable | mDNS not working on your device | Use `http://10.42.0.1` instead |
 | Portal loads but installation log stops updating | Browser lost the SSE connection | Refresh the page — the log stream reconnects automatically |
-| runTipi not running after reboot | First-boot installer failed | Connect to LAN, wait for the retry service, or SSH in and run `retry-runtipi.sh` manually |
+| Runtipi not running after reboot | First-boot installer failed | Connect to LAN, wait for the retry service, or SSH in and run `retry-runtipi.sh` manually |
 | `nft list ruleset` shows no `tipi_nat` table | Flask / watchdog not running | Check `journalctl -u tipi-setup` |
 | Can't SSH in | SSH port or key misconfigured | Re-flash and redo setup; check the SSH port you entered |
 
@@ -133,18 +133,18 @@ MIT
 
 ## 🇫🇷 Français
 
-### Qu'est-ce que TipiOS ?
+### Qu'est-ce que RuntipiOS ?
 
-TipiOS est une image Raspberry Pi OS prête à flasher (Trixie Lite 64-bit) qui guide la configuration initiale via un portail web local au premier démarrage — sans clavier, sans écran.
+RuntipiOS est une image Raspberry Pi OS prête à flasher (Trixie Lite 64-bit) qui guide la configuration initiale via un portail web local au premier démarrage — sans clavier, sans écran.
 
-Une fois configuré, il installe automatiquement **runTipi**, un store d'applications auto-hébergé pour Raspberry Pi (Plex, Nextcloud, Home Assistant, et 200+ applications).
+Une fois configuré, il installe automatiquement **Runtipi**, un store d'applications auto-hébergé pour Raspberry Pi (Plex, Nextcloud, Home Assistant, et 200+ applications).
 
 ### Fonctionnalités
 
 - **Configuration sans écran** — connectez-vous au hotspot WiFi `TipiSetup`, ouvrez un navigateur, c'est tout
 - **Portail de configuration web** — hostname, utilisateur SSH, mot de passe, fuseau horaire, locale, IP statique, WiFi
 - **Multilingue** — anglais, français, allemand, espagnol (changeable à tout moment)
-- **Installation automatique de runTipi** — Docker inclus, démarre à chaque reboot
+- **Installation automatique de Runtipi** — Docker inclus, démarre à chaque reboot
 - **Portail résilient** — un watchdog Python maintient le portail web accessible même pendant que Docker s'installe et réinitialise les règles pare-feu
 - **Support mDNS** — accès via `tipisetup.local` sans saisir d'adresse IP
 - **Ethernet & WiFi** — fonctionne avec les deux ; hotspot WiFi en solution de repli
@@ -154,20 +154,20 @@ Une fois configuré, il installe automatiquement **runTipi**, un store d'applica
 ```
 Flasher l'image → Démarrer → Se connecter au WiFi "TipiSetup" (sans mot de passe)
   → Ouvrir http://tipisetup.local  (ou http://10.42.0.1)
-  → Remplir le formulaire → Cliquer "Appliquer et installer runTipi"
+  → Remplir le formulaire → Cliquer "Appliquer et installer Runtipi"
   → Suivre les logs en direct dans le navigateur
   → Redémarrage automatique
-  → Accéder à runTipi sur http://<votre-hostname>.local
-    (ex : http://tipios.local ou http://192.168.1.50)
+  → Accéder à Runtipi sur http://<votre-hostname>.local
+    (ex : http://runtipios.local ou http://192.168.1.50)
 ```
 
 **Ordre d'installation** (s'exécute automatiquement après avoir cliqué sur Appliquer) :
 1. Configuration système — hostname, fuseau horaire, locale, utilisateur, SSH
 2. Réseau — IP statique et/ou identifiants WiFi
 3. `apt update && apt upgrade` — nécessite Internet ; s'exécute après la connexion WiFi
-4. runTipi — installateur Docker + runTipi
+4. Runtipi — installateur Docker + Runtipi
 
-> **Note :** Si l'installateur runTipi échoue au premier démarrage (coupure réseau, timeout), un service systemd (`tipi-runtipi-retry.service`) le relance automatiquement au prochain démarrage. Le script de relance (`retry-runtipi.sh`) s'exécute une fois, puis se désactive.
+> **Note :** Si l'installateur Runtipi échoue au premier démarrage (coupure réseau, timeout), un service systemd (`tipi-runtipi-retry.service`) le relance automatiquement au prochain démarrage. Le script de relance (`retry-runtipi.sh`) s'exécute une fois, puis se désactive.
 
 ### Matériel requis
 
@@ -181,8 +181,8 @@ L'image est construite avec [pi-gen](https://github.com/RPi-Distro/pi-gen) (bran
 
 ```bash
 # Cloner ce dépôt à côté d'un checkout pi-gen
-git clone https://github.com/<votre-nom>/tipiOS
-cd tipiOS
+git clone https://github.com/<votre-nom>/RuntipiOS
+cd RuntipiOS
 
 # Construire (nécessite Docker)
 ./build.sh
@@ -191,7 +191,7 @@ cd tipiOS
 # L'image se trouve dans deploy/
 ```
 
-> **Note kernel (Raspberry Pi 5) :** Le kernel du RPi 5 (`6.x rpi-2712`) n'inclut pas le module `ip_tables`, donc `iptables-legacy` n'est pas disponible. TipiOS utilise **nftables exclusivement** pour les règles pare-feu et NAT. Cela est transparent pour l'utilisateur.
+> **Note kernel (Raspberry Pi 5) :** Le kernel du RPi 5 (`6.x rpi-2712`) n'inclut pas le module `ip_tables`, donc `iptables-legacy` n'est pas disponible. RuntipiOS utilise **nftables exclusivement** pour les règles pare-feu et NAT. Cela est transparent pour l'utilisateur.
 
 ### Structure du projet
 
@@ -209,7 +209,7 @@ stage-tipi/
         │       ├── configure.html
         │       ├── progress.html
         │       └── wifi.html
-        ├── retry-runtipi.sh        # Relance l'install runTipi au prochain boot si échec
+        ├── retry-runtipi.sh        # Relance l'install Runtipi au prochain boot si échec
         ├── start.sh                # Démarrage : hostapd, dnsmasq, nftables, Flask
         ├── tipi-runtipi-retry.service  # Service systemd pour retry-runtipi.sh
         └── tipi-setup.service      # Service systemd (premier démarrage uniquement)
@@ -224,9 +224,9 @@ stage-tipi/
 | `nftables` | Règle NAT redirigeant le port 80 → 8080 à priorité −150, pour accéder au portail sans numéro de port |
 | Watchdog Python | Thread de fond dans `app.py` — réapplique la règle nftables toutes les 2 s pendant l'installation Docker (Docker réinitialise les règles au démarrage) |
 | `Flask` | Sert le portail de configuration sur le port 8080 |
-| `setup.py` | Subprocess : configure hostname, SSH, locale, réseau, puis lance `apt upgrade` et l'installateur runTipi |
+| `setup.py` | Subprocess : configure hostname, SSH, locale, réseau, puis lance `apt upgrade` et l'installateur Runtipi |
 | `avahi` | mDNS pour que `<hostname>.local` soit résolu sur le réseau local après redémarrage |
-| `retry-runtipi.sh` | Relance l'installateur runTipi au prochain boot en cas d'échec ; se désactive après une réussite |
+| `retry-runtipi.sh` | Relance l'installateur Runtipi au prochain boot en cas d'échec ; se désactive après une réussite |
 
 #### Pourquoi la priorité −150 pour nftables ?
 
@@ -248,7 +248,7 @@ Les templates et `setup.py` l'utilisent automatiquement — aucune autre modific
 |----------|---------------|----------|
 | `http://tipisetup.local` inaccessible | mDNS ne fonctionne pas sur l'appareil | Utiliser `http://10.42.0.1` à la place |
 | Le portail charge mais les logs s'arrêtent | Le navigateur a perdu la connexion SSE | Rafraîchir la page — le flux se reconnecte automatiquement |
-| runTipi absent après le redémarrage | L'installateur a échoué au premier boot | Se connecter au réseau local, attendre le service de relance, ou se connecter en SSH et lancer `retry-runtipi.sh` manuellement |
+| Runtipi absent après le redémarrage | L'installateur a échoué au premier boot | Se connecter au réseau local, attendre le service de relance, ou se connecter en SSH et lancer `retry-runtipi.sh` manuellement |
 | `nft list ruleset` ne montre pas de table `tipi_nat` | Flask / watchdog non démarrés | Vérifier `journalctl -u tipi-setup` |
 | Impossible de se connecter en SSH | Port ou clé SSH mal configurés | Reflasher et recommencer la configuration ; vérifier le port SSH saisi |
 
