@@ -324,10 +324,11 @@ def _restore_nft_redirect():
 
 
 def _nft_watchdog():
-    """Thread de surveillance — restaure la redirection nftables toutes les 2 s
+    """Thread de surveillance — restaure la redirection nftables toutes les 0.5 s
     pendant l'installation, pour contrer les resets éventuels de Docker/runTipi."""
+    _restore_nft_redirect()  # Restauration immédiate au démarrage du watchdog
     while not _setup_done:
-        time.sleep(2)
+        time.sleep(0.5)
         _restore_nft_redirect()
     # Restauration finale une fois l'install terminée
     _restore_nft_redirect()
