@@ -9,7 +9,6 @@ Tourne sur le port 8080, accessible via :
 import json
 import os
 import re
-import signal
 import subprocess
 import threading
 import time
@@ -311,6 +310,29 @@ def _append_log(msg: str, level: str = "log") -> dict:
     return entry
 
 
+def _restore_nft_redirect():
+    """Recrée la redirection nftables 80→8080 (idempotent, sans doublons)."""
+    subprocess.run(["nft", "delete", "table", "ip", "tipi_nat"], capture_output=True)
+    subprocess.run(["nft", "add", "table", "ip", "tipi_nat"], capture_output=True)
+    subprocess.run(["nft", "add", "chain", "ip", "tipi_nat", "prerouting",
+                    "{ type nat hook prerouting priority -100; policy accept; }"],
+                   capture_output=True)
+    for iface in ("wlan0", "eth0"):
+        subprocess.run(["nft", "add", "rule", "ip", "tipi_nat", "prerouting",
+                        "iif", iface, "tcp", "dport", "80", "redirect", "to", ":8080"],
+                       capture_output=True)
+
+
+def _nft_watchdog():
+    """Thread de surveillance — restaure la redirection nftables toutes les 2 s
+    pendant l'installation, pour contrer les resets éventuels de Docker/runTipi."""
+    while not _setup_done:
+        time.sleep(2)
+        _restore_nft_redirect()
+    # Restauration finale une fois l'install terminée
+    _restore_nft_redirect()
+
+
 def _run_setup():
     """Thread de configuration système — lit _config, écrit dans _progress_log."""
     global _setup_done
@@ -319,6 +341,9 @@ def _run_setup():
     def done(msg):  _append_log(msg, "success")
     def err(msg):   _append_log(msg, "error")
     def out(msg):   _append_log(msg, "log")
+
+    # Lancer le watchdog nftables en parallèle
+    threading.Thread(target=_nft_watchdog, daemon=True).start()
 
     try:
         _run_setup_inner(step, done, err, out)

@@ -263,7 +263,6 @@ def connect_wifi(wifi_ssid: str, wifi_password: str):
     """Connecte wlan0 au WiFi choisi — appelé EN DERNIER (coupe le hotspot)."""
     if not wifi_ssid:
         return
-    import time
     step(T["wifi_step"].format(wifi_ssid=wifi_ssid))
     try:
         subprocess.run(["pkill", "-f", "tipi-hostapd.conf"], capture_output=True)
@@ -436,7 +435,7 @@ def main():
     configure_static_ip(static_ip, static_gw, static_dns)
     system_update()
     if wifi_ssid:
-        step(T["wifi_hotspot_warn"].format(hostname=hostname))
+        step(T["wifi_hotspot_warn"])
     connect_wifi(wifi_ssid, wifi_password)
     if not install_runtipi():
         try:
