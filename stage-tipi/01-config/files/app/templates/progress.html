@@ -79,6 +79,7 @@
   let nextIdx   = 0;
   let pollTimer = null;
   let failCount = 0;
+  let polling   = false;
 
   const logEl      = document.getElementById("log-container");
   const barEl      = document.getElementById("progress-bar");
@@ -124,6 +125,8 @@
   }
 
   async function poll() {
+    if (polling) return;
+    polling = true;
     try {
       const ctrl = new AbortController();
       const t = setTimeout(() => ctrl.abort(), 4000);
@@ -156,6 +159,7 @@
         spinner.style.display = "none";
       }
     } catch (_) { onFail(); }
+    finally { polling = false; }
   }
 
   function onFail() {
