@@ -20,6 +20,7 @@ Once configured, it automatically installs **Runtipi**, a self-hosted app store 
 - **Automatic Runtipi installation** — Docker included, starts on every reboot
 - **mDNS support** — access via `tipisetup.local:8080` without typing an IP address
 - **Ethernet & WiFi** — works with both; WiFi hotspot as fallback
+- **Optional Cockpit** — web-based system management interface (port 9090), enable via checkbox during setup
 
 ### First Boot Flow
 
@@ -95,6 +96,7 @@ stage-tipi/
 | `setup.py` | Subprocess: configures hostname, SSH, locale, network, then runs `apt upgrade` and the Runtipi installer |
 | `avahi` | mDNS so `<hostname>.local` resolves on the LAN after reboot |
 | `retry-runtipi.sh` | Retries the Runtipi installer on the next boot if it failed; self-disables after one successful run |
+| `cockpit` | Optional web system management UI on port 9090 — installed at build time, disabled by default, enabled via the setup portal |
 
 ### Adding a Language
 
@@ -111,7 +113,7 @@ Templates and `setup.py` pick it up automatically — no other changes needed.
 | Symptom | Likely cause | Fix |
 |---------|-------------|-----|
 | `http://tipisetup.local:8080` unreachable | mDNS not working on your device | Use `http://10.42.0.1:8080` instead |
-| Portal loads but installation log stops updating | Browser lost the poll connection | Refresh the page — the log reconnects automatically |
+| Installation log freezes mid-way or final message missing | Concurrent poll bug (old image) | Fixed in current build — polling is serialised, no manual action needed |
 | Runtipi not running after reboot | First-boot installer failed | Connect to LAN, wait for the retry service, or SSH in and run `retry-runtipi.sh` manually |
 | Can't SSH in | SSH port or key misconfigured | Re-flash and redo setup; check the SSH port you entered |
 
@@ -137,6 +139,7 @@ Une fois configuré, il installe automatiquement **Runtipi**, un store d'applica
 - **Installation automatique de Runtipi** — Docker inclus, démarre à chaque reboot
 - **Support mDNS** — accès via `tipisetup.local:8080` sans saisir d'adresse IP
 - **Ethernet & WiFi** — fonctionne avec les deux ; hotspot WiFi en solution de repli
+- **Cockpit optionnel** — interface web de gestion système (port 9090), activable via une case à cocher lors de la configuration
 
 ### Déroulement au premier démarrage
 
@@ -212,6 +215,7 @@ stage-tipi/
 | `setup.py` | Subprocess : configure hostname, SSH, locale, réseau, puis lance `apt upgrade` et l'installateur Runtipi |
 | `avahi` | mDNS pour que `<hostname>.local` soit résolu sur le réseau local après redémarrage |
 | `retry-runtipi.sh` | Relance l'installateur Runtipi au prochain boot en cas d'échec ; se désactive après une réussite |
+| `cockpit` | Interface web de gestion système optionnelle sur le port 9090 — installée au build, désactivée par défaut, activable via le portail de configuration |
 
 ### Ajouter une langue
 
@@ -228,7 +232,7 @@ Les templates et `setup.py` l'utilisent automatiquement — aucune autre modific
 | Symptôme | Cause probable | Solution |
 |----------|---------------|----------|
 | `http://tipisetup.local:8080` inaccessible | mDNS ne fonctionne pas sur l'appareil | Utiliser `http://10.42.0.1:8080` à la place |
-| Le portail charge mais les logs s'arrêtent | Le navigateur a perdu la connexion SSE | Rafraîchir la page — le flux se reconnecte automatiquement |
+| Les logs se figent en cours d'installation ou le message final n'apparaît pas | Bug de polling concurrent (ancienne image) | Corrigé dans la version actuelle — le polling est sérialisé, aucune action manuelle nécessaire |
 | Runtipi absent après le redémarrage | L'installateur a échoué au premier boot | Se connecter au réseau local, attendre le service de relance, ou se connecter en SSH et lancer `retry-runtipi.sh` manuellement |
 | Impossible de se connecter en SSH | Port ou clé SSH mal configurés | Reflasher et recommencer la configuration ; vérifier le port SSH saisi |
 
