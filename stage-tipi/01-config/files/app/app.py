@@ -264,6 +264,7 @@ def apply_config():
 
     wifi_ssid = request.form.get("wifi_ssid", "").strip()
     wifi_password = request.form.get("wifi_password", "").strip()
+    cockpit_enabled = request.form.get("cockpit_enabled") == "1"
 
     _config = {
         "hostname":              hostname,
@@ -279,6 +280,7 @@ def apply_config():
         "static_dns":            static_dns,
         "wifi_ssid":             wifi_ssid,
         "wifi_password":         wifi_password,
+        "cockpit_enabled":       cockpit_enabled,
         "lang":                  session.get("lang", DEFAULT_LANG),
     }
 

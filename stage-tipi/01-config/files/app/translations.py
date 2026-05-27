@@ -156,10 +156,11 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "config_missing":       "Username or password missing",
         "wifi_hotspot_warn":    "Hotspot will disconnect — reconnect to your WiFi then open http://tipisetup.local:8080 to follow the installation",
         "config_done":          "Configuration complete!",
+        "label_cockpit":        "Enable Cockpit (web management interface — port 9090)",
+        "hint_cockpit":         "Accessible at <code>http://&lt;hostname&gt;.local:9090</code> or <code>http://&lt;ip&gt;:9090</code> after reboot. Login with your SSH credentials.",
+        "cockpit_step":         "Activating Cockpit…",
+        "cockpit_done":         "Cockpit enabled — accessible on port 9090 after reboot",
     },
-
-    # =========================================================================
-    # FRANÇAIS
     # =========================================================================
     "fr": {
         "tagline":              "Assistant de configuration — Premier démarrage",
@@ -291,10 +292,11 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "config_missing":       "Nom d'utilisateur ou mot de passe manquant",
         "wifi_hotspot_warn":    "Le hotspot va s'arrêter — reconnectez-vous à votre WiFi puis ouvrez http://tipisetup.local:8080 pour suivre l'installation",
         "config_done":          "Configuration terminée !",
+        "label_cockpit":        "Activer Cockpit (interface web de gestion — port 9090)",
+        "hint_cockpit":         "Accessible via <code>http://&lt;hostname&gt;.local:9090</code> ou <code>http://&lt;ip&gt;:9090</code> après redémarrage. Identifiants SSH.",
+        "cockpit_step":         "Activation de Cockpit…",
+        "cockpit_done":         "Cockpit activé — accessible sur le port 9090 après redémarrage",
     },
-
-    # =========================================================================
-    # DEUTSCH
     # =========================================================================
     "de": {
         "tagline":              "Einrichtungsassistent — Erster Start",
@@ -426,6 +428,10 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "config_missing":       "Benutzername oder Passwort fehlt",
         "wifi_hotspot_warn":    "Hotspot wird getrennt — verbinden Sie sich mit Ihrem WLAN und öffnen Sie http://tipisetup.local:8080 um der Installation zu folgen",
         "config_done":          "Konfiguration abgeschlossen!",
+        "label_cockpit":        "Cockpit aktivieren (Web-Verwaltungsoberfläche — Port 9090)",
+        "hint_cockpit":         "Erreichbar unter <code>http://&lt;hostname&gt;.local:9090</code> oder <code>http://&lt;ip&gt;:9090</code> nach dem Neustart. SSH-Anmeldedaten verwenden.",
+        "cockpit_step":         "Cockpit wird aktiviert…",
+        "cockpit_done":         "Cockpit aktiviert — nach dem Neustart auf Port 9090 erreichbar",
     },
 
     # =========================================================================
@@ -561,6 +567,10 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "config_missing":       "Nombre de usuario o contraseña no proporcionados",
         "wifi_hotspot_warn":    "El hotspot se detendrá — vuelva a conectarse a su WiFi y abra http://tipisetup.local:8080 para seguir la instalación",
         "config_done":          "¡Configuración completada!",
+        "label_cockpit":        "Activar Cockpit (interfaz de administración web — puerto 9090)",
+        "hint_cockpit":         "Accesible en <code>http://&lt;hostname&gt;.local:9090</code> o <code>http://&lt;ip&gt;:9090</code> tras el reinicio. Usar credenciales SSH.",
+        "cockpit_step":         "Activando Cockpit…",
+        "cockpit_done":         "Cockpit activado — accesible en el puerto 9090 tras el reinicio",
     },
 }
 

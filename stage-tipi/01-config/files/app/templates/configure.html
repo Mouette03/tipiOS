@@ -121,6 +121,17 @@
     </div>
   </details>
 
+  <hr style="border:none;border-top:1px solid var(--border);margin:1.25rem 0">
+
+  <!-- Cockpit -->
+  <label class="check-row" style="gap:0.75rem;align-items:flex-start;cursor:pointer">
+    <input type="checkbox" name="cockpit_enabled" value="1" style="margin-top:3px">
+    <span>
+      <strong>{{ t('label_cockpit') }}</strong><br>
+      <small style="color:var(--muted);font-size:0.72rem">{{ t('hint_cockpit')|safe }}</small>
+    </span>
+  </label>
+
   <!-- Connexion WiFi — à la fin, appliquée en dernier par setup.py -->
   <hr style="border:none;border-top:1px solid var(--border);margin:1.25rem 0">
 

@@ -383,6 +383,16 @@ def get_final_ip() -> str | None:
     return None
 
 
+def configure_cockpit(enabled: bool):
+    if enabled:
+        step(T["cockpit_step"])
+        subprocess.run(["systemctl", "enable", "--now", "cockpit.socket"], check=False)
+        done(T["cockpit_done"])
+    else:
+        subprocess.run(["systemctl", "disable", "--now", "cockpit.socket"],
+                       check=False, capture_output=True)
+
+
 # ---------------------------------------------------------------------------
 # Point d'entrée
 # ---------------------------------------------------------------------------
@@ -423,6 +433,7 @@ def main():
     static_dns           = cfg.get("static_dns", "8.8.8.8")
     wifi_ssid             = cfg.get("wifi_ssid", "").strip()
     wifi_password         = cfg.get("wifi_password", "").strip()
+    cockpit_enabled       = bool(cfg.get("cockpit_enabled", False))
 
     # Validation minimale
     if not username or not password:
@@ -449,6 +460,8 @@ def main():
         except Exception:
             pass
         err(T["runtipi_retry_boot"].format(hostname=hostname))
+
+    configure_cockpit(cockpit_enabled)
 
     final_ip = get_final_ip()
     if final_ip:
