@@ -16,7 +16,7 @@
     <button id="reboot-btn" onclick="doReboot()"
       style="padding:0.65rem 1.5rem;font-size:0.9rem;border-radius:var(--radius);
              border:none;background:var(--accent);color:#fff;cursor:pointer;font-weight:600">
-      {{ t('btn_reboot') }}
+      🔄 {{ t('btn_reboot') }}
     </button>
     <p id="reboot-msg" style="display:none;color:var(--muted);font-size:0.82rem;margin-top:0.6rem">
       {{ t('reboot_msg') }}
@@ -171,7 +171,7 @@
     const btn = document.getElementById("reboot-btn");
     const msg = document.getElementById("reboot-msg");
     btn.disabled = true;
-    btn.textContent = I18N.btn_rebooting;
+    btn.textContent = "⏳ " + I18N.btn_rebooting;
     try { await fetch("/reboot", { method: "POST" }); } catch (_) {}
     btn.style.display = "none";
     msg.style.display = "";
