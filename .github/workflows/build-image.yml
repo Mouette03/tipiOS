@@ -129,8 +129,8 @@ jobs:
             exit 1
           fi
           TAG="$RAW_TAG"
-          # Récupère les 20 derniers commits pour le changelog (fetch-depth: 0 requis)
-          CHANGELOG=$(git log --oneline -20 --pretty=format:'- %s (%h)' 2>/dev/null || echo '- (no changelog available)')
+          # Récupère les 5 derniers commits pour le changelog (fetch-depth: 0 requis)
+          CHANGELOG=$(git log --oneline -5 --pretty=format:'- %s (%h)' 2>/dev/null || echo '- (no changelog available)')
           BODY="## RuntipiOS — Ready-to-flash Raspberry Pi image
 
           ### Flashing
